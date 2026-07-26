@@ -18,6 +18,8 @@ This web-based application simulates and compares two cache operations for an **
 1. **8-Way BSA + Least Recently Used (LRU)**
 2. **8-Way BSA + Most Recently Used (MRU)**
 
+The simulator provides step-by-step memory trace animation, real-time cache layout updates, detailed statistical reporting, and side-by-side performance comparisons.
+
 ---
 
 ## Live Deployment & Demo
@@ -26,12 +28,24 @@ This web-based application simulates and compares two cache operations for an **
 
 ---
 
-## Cache Simulation Parameters
-As per project specifications, the system supports the following configurations:
-* **Main Memory Size:** Fixed at 1024 blocks
+## Cache Simulation Specifications
+* **Main Memory Size:** Fixed at 1024 blocks (Block numbers 0–1023)
 * **Block Size:** Parameterized (Power of 2, minimum 2 words)
 * **Number of Cache Blocks ($n$):** Parameterized (Power of 2, minimum 4 blocks)
-* **Read Policy:** Parameterized (Load-through / Non-load-through)
+* **Read Policy:** Parameterized (**Load-Through** / **Non-Load-Through**)
+* **Associativity:** 8-Way Set Associative
+  * $\text{Total Sets} = \frac{n}{8}$
+  * $\text{Set Index} = \text{Block Number} \pmod{\text{Total Sets}}$
+  * $\text{Tag} = \left\lfloor \frac{\text{Block Number}}{\text{Total Sets}} \right\rfloor$
+
+---
+
+## Output Metrics Computed
+1. Total Memory Access Count
+2. Cache Hit Count & Cache Miss Count
+3. Cache Hit Rate (%) & Cache Miss Rate (%)
+4. Average Memory Access Time (AMAT)
+5. Total Memory Access Time (Cycles)
 
 ---
 
