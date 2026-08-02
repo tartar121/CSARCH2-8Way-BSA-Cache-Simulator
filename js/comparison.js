@@ -41,7 +41,32 @@
  */
 function runComparison(sequence, baseConfig) {
   // TODO: implement this
-  return { lru: null, mru: null };
+  const lruConfig = {
+    numCacheBlocks: baseConfig.numCacheBlocks,
+    blockSize:      baseConfig.blockSize,
+    readPolicy:     baseConfig.readPolicy,
+    policy:         'LRU',
+  };
+  const lruEngine = new CacheEngine(lruConfig);
+  const lruLog    = lruEngine.simulate(sequence);
+  const lruStats  = lruEngine.getStats();
+  const lruState  = lruEngine.getCacheState();
+
+  const mruConfig = {
+    numCacheBlocks: baseConfig.numCacheBlocks,
+    blockSize:      baseConfig.blockSize,
+    readPolicy:     baseConfig.readPolicy,
+    policy:         'MRU',
+  };
+  const mruEngine = new CacheEngine(mruConfig);
+  const mruLog    = mruEngine.simulate(sequence);
+  const mruStats  = mruEngine.getStats();
+  const mruState  = mruEngine.getCacheState();
+
+  return {
+    lru: { policy: 'LRU', stats: lruStats, log: lruLog, finalState: lruState },
+    mru: { policy: 'MRU', stats: mruStats, log: mruLog, finalState: mruState },
+  };
 }
 
 
@@ -77,5 +102,83 @@ function runComparison(sequence, baseConfig) {
  */
 function buildComparisonTable(comparison) {
   // TODO: implement this
-  return [];
+  const lru = comparison.lru.stats;
+  const mru = comparison.mru.stats;
+  const rows = [];
+
+  // 1. Total Accesses — always a tie
+  rows.push({
+    metric: 'Total Accesses',
+    lru:    lru.totalAccesses,
+    mru:    mru.totalAccesses,
+    winner: 'tie',
+  });
+
+  // 2. Cache Hits — higher is better
+  let hitsWinner;
+  if (lru.hits === mru.hits) {
+    hitsWinner = 'tie';
+  } else if (lru.hits > mru.hits) {
+    hitsWinner = 'LRU';
+  } else {
+    hitsWinner = 'MRU';
+  }
+  rows.push({ metric: 'Cache Hits', lru: lru.hits, mru: mru.hits, winner: hitsWinner });
+
+  // 3. Cache Misses — lower is better
+  let missesWinner;
+  if (lru.misses === mru.misses) {
+    missesWinner = 'tie';
+  } else if (lru.misses < mru.misses) {
+    missesWinner = 'LRU';
+  } else {
+    missesWinner = 'MRU';
+  }
+  rows.push({ metric: 'Cache Misses', lru: lru.misses, mru: mru.misses, winner: missesWinner });
+
+  // 4. Hit Rate — higher is better
+  let hitRateWinner;
+  if (lru.hitRateRaw === mru.hitRateRaw) {
+    hitRateWinner = 'tie';
+  } else if (lru.hitRateRaw > mru.hitRateRaw) {
+    hitRateWinner = 'LRU';
+  } else {
+    hitRateWinner = 'MRU';
+  }
+  rows.push({ metric: 'Hit Rate', lru: lru.hitRate, mru: mru.hitRate, winner: hitRateWinner });
+
+  // 5. Miss Rate — lower is better
+  let missRateWinner;
+  if (lru.missRateRaw === mru.missRateRaw) {
+    missRateWinner = 'tie';
+  } else if (lru.missRateRaw < mru.missRateRaw) {
+    missRateWinner = 'LRU';
+  } else {
+    missRateWinner = 'MRU';
+  }
+  rows.push({ metric: 'Miss Rate', lru: lru.missRate, mru: mru.missRate, winner: missRateWinner });
+
+  // 6. AMAT — lower is better
+  let amatWinner;
+  if (lru.amatRaw === mru.amatRaw) {
+    amatWinner = 'tie';
+  } else if (lru.amatRaw < mru.amatRaw) {
+    amatWinner = 'LRU';
+  } else {
+    amatWinner = 'MRU';
+  }
+  rows.push({ metric: 'AMAT', lru: lru.amat, mru: mru.amat, winner: amatWinner });
+
+  // 7. Total Access Time — lower is better
+  let timeWinner;
+  if (lru.totalTimeRaw === mru.totalTimeRaw) {
+    timeWinner = 'tie';
+  } else if (lru.totalTimeRaw < mru.totalTimeRaw) {
+    timeWinner = 'LRU';
+  } else {
+    timeWinner = 'MRU';
+  }
+  rows.push({ metric: 'Total Access Time', lru: lru.totalTime, mru: mru.totalTime, winner: timeWinner });
+
+  return rows;
 }
