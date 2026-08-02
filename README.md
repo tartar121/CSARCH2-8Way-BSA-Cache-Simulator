@@ -232,7 +232,7 @@ No build step required -> open `index.html` directly in any browser.
 # Option 1: open the file directly
 open index.html
 
-# Option 2: serve locally to avoid any CORS issues
+# Option 2: serve locally to avoid any issues
 python3 -m http.server 8080
 # then visit http://localhost:8080
 ```
