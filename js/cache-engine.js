@@ -18,10 +18,10 @@
  */
 
 // Constants
-const MAIN_MEMORY_BLOCKS = 1024;  // fixed per project spec
-const WAYS               = 8;     // fixed for Machine 9 (8-way)
-const CACHE_ACCESS_TIME  = 1;     // ns
-const MEMORY_ACCESS_TIME = 10;    // ns
+const MAIN_MEMORY_BLOCKS = 1024;  // fixed per project spec[cite: 1]
+const WAYS               = 8;     // fixed for Machine 9 (8-way)[cite: 1]
+const CACHE_ACCESS_TIME  = 1;     // ns (Tc - Cache Access Time)
+const MEMORY_ACCESS_TIME = 10;    // ns (Tm - Main Memory Access Time)
 
 
 // CacheEngine Class
@@ -39,6 +39,7 @@ class CacheEngine {
     this.policy         = config.policy;
     this.readPolicy     = config.readPolicy;
     this.ways           = WAYS;
+    // Calculate total sets for Set-Associative Mapping: NumSets = TotalBlocks / Ways
     this.numSets        = Math.floor(this.numCacheBlocks / this.ways);
 
     if (this.numSets < 1) {
@@ -61,9 +62,19 @@ class CacheEngine {
    * and is used as the 'order' timestamp for LRU/MRU tracking.
    */
   _initCache() {
-    // TODO: implement this
-    this.sets    = [];
-    this.setClock = [];
+    // Allocate 2D array: numSets rows x 8 ways (columns)
+    // Every cache slot starts empty (valid = false)
+    this.sets = Array.from({ length: this.numSets }, () =>
+      Array.from({ length: this.ways }, () => ({
+        valid: false,
+        tag: null,
+        blockNum: null,
+        order: 0
+      }))
+    );
+    
+    // Independent step counter per set to track relative access order for LRU/MRU
+    this.setClock = new Array(this.numSets).fill(0);
   }
 
   /**
@@ -71,7 +82,6 @@ class CacheEngine {
    * Reset hit/miss counters and the access log array.
    */
   _resetStats() {
-    // TODO: implement this
     this.stats = {
       totalAccesses: 0,
       hits:          0,
@@ -80,7 +90,7 @@ class CacheEngine {
     this.accessLog = [];
   }
 
-  //Address Decomposition
+  // Address Decomposition
   /**
    * TODO:
    * Given a block address, return its set index and tag.
@@ -93,8 +103,9 @@ class CacheEngine {
    * @returns {{ setIndex: number, tag: number }}
    */
   decompose(blockAddr) {
-    // TODO: implement this
-    return { setIndex: 0, tag: 0 };
+    const setIndex = blockAddr % this.numSets;
+    const tag = Math.floor(blockAddr / this.numSets);
+    return { setIndex, tag };
   }
 
   // Replacement Policy 
@@ -109,8 +120,25 @@ class CacheEngine {
    * @returns {number} index of the line to evict (0–7)
    */
   _selectVictim(set) {
-    // TODO: implement this
-    return 0;
+    let victimIndex = 0;
+    let targetOrder = set[0].order;
+
+    for (let way = 1; way < set.length; way++) {
+      if (this.policy === 'LRU') {
+        // Find line with lowest order (least recently used)
+        if (set[way].order < targetOrder) {
+          targetOrder = set[way].order;
+          victimIndex = way;
+        }
+      } else if (this.policy === 'MRU') {
+        // Find line with highest order (most recently used)
+        if (set[way].order > targetOrder) {
+          targetOrder = set[way].order;
+          victimIndex = way;
+        }
+      }
+    }
+    return victimIndex;
   }
 
   // Core Access
@@ -155,8 +183,86 @@ class CacheEngine {
    * @returns {Object} log entry
    */
   access(blockAddr) {
-    // TODO: implement this
-    return {};
+    // Step 1: Increment overall counter & local set clock
+    this.stats.totalAccesses++;
+    const { setIndex, tag } = this.decompose(blockAddr);
+    this.setClock[setIndex]++;
+    const currentClock = this.setClock[setIndex];
+
+    const targetSet = this.sets[setIndex];
+    let result = 'MISS';
+    let hitLine = null;
+    let loadedLine = null;
+    let evicted = null;
+
+    // Step 2 & 3: Check for cache hit across all 8 ways in the set
+    for (let way = 0; way < this.ways; way++) {
+      if (targetSet[way].valid && targetSet[way].tag === tag) {
+        result = 'HIT';
+        hitLine = way;
+        break;
+      }
+    }
+
+    if (result === 'HIT') {
+      // HIT: Update access order timestamp to current set clock
+      this.stats.hits++;
+      targetSet[hitLine].order = currentClock;
+    } else {
+      // MISS: Search for available empty way
+      this.stats.misses++;
+      const emptySlotIndex = targetSet.findIndex(line => !line.valid);
+
+      if (emptySlotIndex !== -1) {
+        // Load into empty slot
+        loadedLine = emptySlotIndex;
+      } else {
+        // Set is full: Select victim via LRU or MRU policy and evict
+        loadedLine = this._selectVictim(targetSet);
+        const victimLine = targetSet[loadedLine];
+
+        const reasonText = this.policy === 'LRU'
+          ? `Least recently used (order ${victimLine.order})`
+          : `Most recently used (order ${victimLine.order})`;
+
+        evicted = {
+          line: loadedLine,
+          blockNum: victimLine.blockNum,
+          tag: victimLine.tag,
+          reason: reasonText
+        };
+      }
+
+      // Update line in target set
+      targetSet[loadedLine] = {
+        valid: true,
+        tag: tag,
+        blockNum: blockAddr,
+        order: currentClock
+      };
+    }
+
+    // Step 4: Create a deep snapshot copy of the 8 lines in this set for rendering in UI
+    const snapshot = targetSet.map(line => ({ ...line }));
+
+    // Construct log entry adhering to LOG ENTRY CONTRACT
+    const logEntry = {
+      accessNum:  this.stats.totalAccesses,
+      blockAddr:  blockAddr,
+      setIndex:   setIndex,
+      tag:        tag,
+      result:     result,
+      policy:     this.policy,
+      readPolicy: this.readPolicy,
+      hitLine:    hitLine,
+      loadedLine: loadedLine,
+      evicted:    evicted,
+      snapshot:   snapshot
+    };
+
+    // Step 5: Save to access log and return
+    this.accessLog.push(logEntry);
+    return logEntry;
   }
 
   // Batch Simulation
@@ -196,15 +302,46 @@ class CacheEngine {
    *
    * AMAT formulas:
    *   non-load-through: AMAT = Tc + (missRate × Tm)
-   *                           = 1  + (missRate × 10)
+   *                          = 1  + (missRate × 10)
    *   load-through:     AMAT = (hitRate × Tc) + (missRate × Tm)
-   *                           = (hitRate × 1)  + (missRate × 10)
+   *                          = (hitRate × 1)  + (missRate × 10)
    *
    * @returns {Object}
    */
   getStats() {
-    // TODO: implement this
-    return {};
+    const total = this.stats.totalAccesses;
+    const hits = this.stats.hits;
+    const misses = this.stats.misses;
+
+    const hitRateRaw  = total > 0 ? hits / total : 0;
+    const missRateRaw = total > 0 ? misses / total : 0;
+
+    // AMAT Formula Calculation
+    let amatRaw = 0;
+    if (this.readPolicy === 'load-through') {
+      // load-through: AMAT = (hitRate × Tc) + (missRate × Tm)
+      amatRaw = (hitRateRaw * CACHE_ACCESS_TIME) + (missRateRaw * MEMORY_ACCESS_TIME);
+    } else {
+      // non-load-through: AMAT = Tc + (missRate × Tm)
+      amatRaw = CACHE_ACCESS_TIME + (missRateRaw * MEMORY_ACCESS_TIME);
+    }
+
+    // Total Access Time = Total Accesses × AMAT
+    const totalTimeRaw = total * amatRaw;
+
+    return {
+      totalAccesses: total,
+      hits:          hits,
+      misses:        misses,
+      hitRate:       `${(hitRateRaw * 100).toFixed(2)}%`,
+      missRate:      `${(missRateRaw * 100).toFixed(2)}%`,
+      hitRateRaw:    hitRateRaw,
+      missRateRaw:   missRateRaw,
+      amat:          `${amatRaw.toFixed(4)} ns`,
+      amatRaw:       amatRaw,
+      totalTime:     `${totalTimeRaw.toFixed(2)} ns`,
+      totalTimeRaw:  totalTimeRaw
+    };
   }
 
   // Final State Snapshot
@@ -216,7 +353,7 @@ class CacheEngine {
    * @returns {Object[][]} 2D array [numSets][ways] of cache line objects
    */
   getCacheState() {
-    // TODO: implement this
+    // Return a cloned copy of the 2D array to prevent external direct mutations
     return this.sets.map(set => set.map(line => ({ ...line })));
   }
 }
