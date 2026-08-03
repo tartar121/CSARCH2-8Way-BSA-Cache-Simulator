@@ -169,6 +169,36 @@ textarea:focus-visible {
 .panel-header .icon { font-size: 14px; }
 .panel-body { padding: 16px; }
 
+/* Small tag that can sit inside a panel-header, e.g. "Read-only" / "LRU vs. MRU" */
+.panel-header-tag {
+  margin-left:    auto;
+  font-family:    var(--font-mono);
+  font-size:      10px;
+  font-weight:    600;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color:          var(--text-muted);
+  background:     var(--bg-input);
+  border:         1px solid var(--border);
+  border-radius:  var(--radius-sm);
+  padding:        2px 8px;
+}
+.panel-header-tag--violet {
+  color:       var(--accent-violet);
+  border-color: rgba(167,139,250,0.4);
+  background:  rgba(167,139,250,0.08);
+}
+
+/* Fixed Parameters — reads as a reference sheet, not an interactive config panel */
+.panel--reference {
+  background: var(--bg-panel);
+}
+.panel--reference .panel-header {
+  background: transparent;
+  color:      var(--text-muted);
+}
+.panel--reference .panel-body { padding: 14px 16px; }
+
 /* Forms */
 .form-row {
   display:       flex;
@@ -261,8 +291,10 @@ button {
   transition:  opacity 0.15s, transform 0.1s, background 0.15s, box-shadow 0.15s, border-color 0.15s;
   letter-spacing: 0.02em;
 }
-button:disabled { opacity: 0.35; cursor: not-allowed; }
+button:disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(0.55); box-shadow: none !important; }
 button:not(:disabled):active { transform: scale(0.97); }
+button:not(:disabled):hover { transform: translateY(-1px); }
+button:not(:disabled):active { transform: translateY(0) scale(0.97); }
 
 .btn-primary   { background: var(--accent-cyan);   color: var(--ink-on-accent); box-shadow: 0 0 14px rgba(45,224,208,0.25); }
 .btn-success   { background: var(--accent-green);  color: var(--ink-on-accent); }
@@ -323,63 +355,140 @@ button:not(:disabled):active { transform: scale(0.97); }
   line-height: 1.4;
 }
 
-/* Simulation Controls Row */
+/* Simulation Controls Row — grouped into Playback / Snapshot / Analysis clusters */
 .sim-controls {
-  display:     flex;
-  flex-wrap:   wrap;
-  gap:         8px;
-  align-items: center;
+  display:       flex;
+  flex-wrap:     wrap;
+  gap:           16px;
+  align-items:   center;
 }
+.control-group {
+  display:       flex;
+  flex-wrap:     wrap;
+  align-items:   center;
+  gap:           10px;
+}
+.control-group-label {
+  font-size:      9px;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color:          var(--text-muted);
+  opacity:        0.7;
+  white-space:    nowrap;
+}
+.control-group-buttons {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       6px;
+}
+/* Vertical rule between clusters — becomes a horizontal rule on narrow screens */
+.control-divider {
+  width:      1px;
+  align-self: stretch;
+  min-height: 28px;
+  background: var(--border);
+}
+/* Analysis (Compare Policies) is the important secondary feature — push it to the end */
+.control-group--analysis { margin-left: auto; }
+
 .speed-ctrl {
-  display:     flex;
-  align-items: center;
-  gap:         8px;
-  margin-left: auto;
+  display:       flex;
+  align-items:   center;
+  gap:           8px;
+  padding:       5px 10px 5px 12px;
+  background:    var(--bg-input);
+  border:        1px solid var(--border);
+  border-radius: 999px;
 }
-.speed-ctrl label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.speed-ctrl label {
+  font-size:      10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color:          var(--text-muted);
+  white-space:    nowrap;
+}
 input[type="range"] {
-  width:        90px;
+  width:        80px;
   accent-color: var(--accent-cyan);
   cursor:       pointer;
 }
 #speed-label {
   font-family: var(--font-mono);
   font-size:   12px;
+  font-weight: 700;
   color:       var(--accent-cyan);
-  min-width:   24px;
+  min-width:   22px;
+  text-align:  right;
+}
+
+@media (max-width: 900px) {
+  .control-divider { width: 100%; min-height: 1px; align-self: auto; }
+  .control-group--analysis { margin-left: 0; }
 }
 
 /* Progress Bar */
 .progress-wrap {
   background:    var(--bg-input);
   border-radius: 4px;
-  height:        6px;
+  height:        8px;
   overflow:      hidden;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  border:        1px solid var(--border);
 }
 .progress-bar {
-  background:    var(--accent-cyan);
+  background:    linear-gradient(90deg, var(--accent-cyan), var(--accent-cyan-hi));
   box-shadow:    0 0 8px rgba(45,224,208,0.5);
   height:        100%;
   width:         0%;
-  transition:    width 0.2s ease;
+  transition:    width 0.25s ease;
   border-radius: 4px;
 }
 .progress-meta {
   display:         flex;
   justify-content: space-between;
+  align-items:     center;
   font-size:       11px;
   font-family:     var(--font-mono);
   color:           var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
+#progress-text { font-size: 12px; }
 
 /* Cache Grid */
 .grid-placeholder {
-  color:      var(--text-muted);
-  font-size:  13px;
-  text-align: center;
-  padding:    48px 16px;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  justify-content: center;
+  gap:            10px;
+  color:          var(--text-muted);
+  text-align:     center;
+  padding:         56px 16px;
+  width:          100%;
 }
+.grid-placeholder-icon {
+  width:  40px;
+  height: 40px;
+  color:  var(--border);
+  margin-bottom: 4px;
+}
+.grid-placeholder-title {
+  font-family:    var(--font-mono);
+  font-size:      12px;
+  font-weight:    700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color:          var(--text-muted);
+}
+.grid-placeholder-text {
+  font-size:   13px;
+  line-height: 1.6;
+  color:       var(--text-muted);
+  opacity:     0.75;
+  max-width:   280px;
+}
+.grid-placeholder-text strong { color: var(--accent-cyan); font-weight: 600; }
 
 /* Column headers for the cache grid */
 .cache-col-headers {
@@ -447,17 +556,21 @@ input[type="range"] {
 .cache-set:has(.cache-evicted) .set-header::before { background: var(--accent-amber); box-shadow: 0 0 8px var(--accent-amber); }
 
 .cache-line {
+  position:      relative;
   display:       grid;
   grid-template-columns: 32px 28px 52px 64px 48px;
   gap:           4px;
-  padding:       5px 10px;
+  padding:       5px 10px 5px 8px;
+  border-left:   2px solid transparent;
   font-family:   var(--font-mono);
   font-size:     12px;
+  font-variant-numeric: tabular-nums;
   border-bottom: 1px solid rgba(34,48,59,0.6);
   align-items:   center;
-  transition:    background 0.25s;
+  transition:    background 0.25s, border-color 0.25s;
 }
 .cache-line:last-child { border-bottom: none; }
+.cache-line:hover { background: rgba(255,255,255,0.03); }
 
 .cl-way   { color: var(--text-muted); font-size: 10px; }
 .cl-tag, .cl-block, .cl-order { color: var(--text-mono); }
@@ -466,14 +579,30 @@ input[type="range"] {
 .valid-yes { color: var(--accent-green); font-weight: 700; }
 .valid-no  { color: var(--text-muted); }
 
-/* Hit/Miss/Evicted highlights */
-.cache-hit     { background: rgba(61,220,132,0.10) !important; }
-.cache-miss    { background: rgba(255,92,92,0.10)  !important; }
-.cache-evicted { background: rgba(255,182,72,0.12) !important; }
+/* Hit/Miss/Evicted highlights — background + left accent + trailing icon,
+   so the state reads even without relying on color alone */
+.cache-hit     { background: rgba(61,220,132,0.10) !important; border-left-color: var(--accent-green); animation: line-flash-green 0.6s ease-out; }
+.cache-miss    { background: rgba(255,92,92,0.10)  !important; border-left-color: var(--accent-red);   animation: line-flash-red 0.6s ease-out; }
+.cache-evicted { background: rgba(255,182,72,0.12) !important; border-left-color: var(--accent-amber); animation: line-flash-amber 0.6s ease-out; }
 
 .cache-hit .cl-block     { color: var(--accent-green); font-weight: 700; }
 .cache-miss .cl-block    { color: var(--accent-red);   font-weight: 700; }
 .cache-evicted .cl-block { color: var(--accent-amber); font-weight: 700; }
+
+/* Trailing glyph reinforces meaning for readers who can't rely on color */
+.cache-hit::after, .cache-miss::after, .cache-evicted::after {
+  font-size:   11px;
+  font-weight: 700;
+  padding-left: 2px;
+  align-self:  center;
+}
+.cache-hit::after     { content: "✓"; color: var(--accent-green); }
+.cache-miss::after    { content: "✕"; color: var(--accent-red);   }
+.cache-evicted::after { content: "⤴"; color: var(--accent-amber); }
+
+@keyframes line-flash-green  { 0% { background: rgba(61,220,132,0.35)  !important; } }
+@keyframes line-flash-red    { 0% { background: rgba(255,92,92,0.35)   !important; } }
+@keyframes line-flash-amber  { 0% { background: rgba(255,182,72,0.35)  !important; } }
 
 /* Stats Grid */
 .stats-grid {
@@ -502,20 +631,42 @@ input[type="range"] {
   font-size:   18px;
   font-weight: 700;
   color:       var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  transition:  color 0.2s;
 }
-#stat-hits      .stat-value { color: var(--accent-green); }
-#stat-misses    .stat-value { color: var(--accent-red);   }
-#stat-hit-rate  .stat-value { color: var(--accent-green); }
-#stat-miss-rate .stat-value { color: var(--accent-red); }
+/* NOTE: id and .stat-value class live on the same element (see index.html),
+   so these must be plain ID selectors, not "#id .stat-value" descendant rules —
+   the old descendant form never matched and these colors never actually applied. */
+#stat-hits      { color: var(--accent-green); }
+#stat-misses    { color: var(--accent-red);   }
+#stat-hit-rate  { color: var(--accent-green); }
+#stat-miss-rate { color: var(--accent-red); }
 
-/* Hit Rate is the headline number — give it top billing in the grid */
+/* Thin top accent per metric — reinforces semantic color without extra ink */
+.stat-card { border-top: 2px solid transparent; }
+.stat-card:has(#stat-hits)      { border-top-color: rgba(61,220,132,0.4); }
+.stat-card:has(#stat-misses)    { border-top-color: rgba(255,92,92,0.4);  }
+.stat-card:has(#stat-hit-rate)  { border-top-color: var(--accent-cyan); }
+.stat-card:has(#stat-miss-rate) { border-top-color: rgba(255,92,92,0.4);  }
+
+/* Hit Rate is the headline number — give it top billing, full width, first position */
 .stats-grid .stat-card:has(#stat-hit-rate) {
+  order:         -1;
+  grid-column:   1 / -1;
   border-color:  var(--accent-cyan);
   box-shadow:    0 0 16px rgba(45,224,208,0.12);
   background:    linear-gradient(160deg, rgba(45,224,208,0.08), var(--bg-panel));
+  padding:       16px 18px;
+  flex-direction: row;
+  align-items:   center;
+  justify-content: space-between;
+  gap:           14px;
+}
+.stats-grid .stat-card:has(#stat-hit-rate) .stat-label {
+  font-size: 12px;
 }
 .stats-grid .stat-card:has(#stat-hit-rate) .stat-value {
-  font-size: 26px;
+  font-size: 34px;
   color:     var(--accent-cyan);
 }
 
@@ -536,9 +687,26 @@ input[type="range"] {
   border-left:   3px solid transparent;
   background:    var(--bg-input);
   line-height:   1.6;
+  animation:     log-enter 0.25s ease-out;
 }
 .log-hit  { border-left-color: var(--accent-green); }
 .log-miss { border-left-color: var(--accent-red);   }
+
+/* The most recently appended entry gets a brief spotlight so it's easy to find */
+.log-entry:last-child {
+  background:    var(--bg-card);
+  box-shadow:    inset 0 0 0 1px var(--border);
+  animation:     log-enter 0.25s ease-out, log-spotlight 1.4s ease-out;
+}
+
+@keyframes log-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes log-spotlight {
+  0%   { box-shadow: inset 0 0 0 1px var(--accent-cyan); }
+  100% { box-shadow: inset 0 0 0 1px var(--border); }
+}
 
 .log-header {
   display:       flex;
@@ -580,6 +748,44 @@ input[type="range"] {
 #compare-panel {
   display: none;
 }
+.panel--compare {
+  border-color: rgba(167,139,250,0.35);
+}
+.compare-vs-banner {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             20px;
+  padding:         14px 10px 20px;
+}
+.compare-side {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            2px;
+  font-family:    var(--font-mono);
+  font-size:      22px;
+  font-weight:    700;
+  letter-spacing: 0.04em;
+}
+.compare-side small {
+  font-family:    var(--font-sans);
+  font-size:      10px;
+  font-weight:    500;
+  letter-spacing: 0.02em;
+  color:          var(--text-muted);
+}
+.compare-side--lru { color: var(--accent-cyan);   }
+.compare-side--mru { color: var(--accent-violet); }
+.compare-vs {
+  font-size:   11px;
+  font-weight: 700;
+  color:       var(--text-muted);
+  border:      1px solid var(--border);
+  border-radius: 999px;
+  padding:     4px 9px;
+  letter-spacing: 0.06em;
+}
 .comp-table {
   width:           100%;
   border-collapse: collapse;
@@ -598,6 +804,7 @@ input[type="range"] {
   letter-spacing: 0.06em;
   background:     var(--bg-panel);
 }
+.comp-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
 .comp-table tbody tr:hover td { background: rgba(45,224,208,0.05); }
 
 .winner-cell {
@@ -640,9 +847,18 @@ input[type="range"] {
 @media (prefers-reduced-motion: reduce) {
   .status-dot { animation: none; }
   html { scroll-behavior: auto; }
+  .cache-hit, .cache-miss, .cache-evicted,
+  .log-entry, .log-entry:last-child,
+  button { animation: none !important; }
 }
 
 /* Responsive */
+
+/* Medium laptop / narrower browser windows — trim the sidebar before stacking */
+@media (max-width: 1200px) {
+  .main-layout { grid-template-columns: 260px 1fr; }
+}
+
 @media (max-width: 900px) {
   .main-layout {
     grid-template-columns: 1fr;
@@ -651,8 +867,9 @@ input[type="range"] {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .sim-controls .speed-ctrl { margin-left: 0; }
   .app-header .status-pill { margin-left: 0; }
+  .compare-vs-banner { gap: 12px; }
+  .compare-side { font-size: 18px; }
 }
 
 @media (max-width: 480px) {
@@ -660,7 +877,10 @@ input[type="range"] {
   .app-header h1 { font-size: 15px; }
   .main-content, .sidebar { padding: 12px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
-  .stats-grid .stat-card:has(#stat-hit-rate) { grid-column: 1 / -1; }
+  .stats-grid .stat-card:has(#stat-hit-rate) { grid-column: 1 / -1; flex-direction: column; align-items: flex-start; }
+  .panel-header { gap: 6px; }
+  .panel-header-tag { margin-left: 0; }
+  .speed-ctrl { width: 100%; justify-content: space-between; }
 }
 
 /* Utility */

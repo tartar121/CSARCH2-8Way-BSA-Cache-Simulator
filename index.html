@@ -146,8 +146,11 @@
 
 
       <!-- PANEL: Fixed Parameters (read-only info) -->
-      <section class="panel" id="panel-fixed">
-        <div class="panel-header"> Fixed Parameters</div>
+      <section class="panel panel--reference" id="panel-fixed">
+        <div class="panel-header">
+          <span class="icon">▤</span> Fixed Parameters
+          <span class="panel-header-tag">Read-only</span>
+        </div>
         <div class="panel-body">
           <!-- 1st Member: Style this as a small info table or list -->
           <ul class="fixed-params">
@@ -175,22 +178,46 @@
               IMPORTANT FOR 1st Member:
               Do NOT rename these button IDs.
               2nd Member attaches click listeners to every one of them.
+              Grouping below is purely structural/CSS — every id is unchanged.
             -->
-            <button id="btn-run" class="btn-primary">▶ Run</button>
-            <button id="btn-step" class="btn-secondary">⏭ Step</button>
-            <button id="btn-auto" class="btn-success">⏩ Auto-Play</button>
-            <button id="btn-pause" class="btn-warning">⏸ Pause</button>
-            <button id="btn-final" class="btn-secondary">⊞ Final Snapshot</button>
-            <button id="btn-reset" class="btn-ghost btn-reset">↺ Reset</button>
-            <button id="btn-compare" class="btn-compare">⇄ Compare Policies</button>
 
-            <!-- Speed slider for auto-play -->
-            <div class="speed-ctrl">
-              <label for="speed-slider">Speed</label>
-              <input type="range" id="speed-slider" min="1" max="10" value="5" />
-              <!-- ui.js writes the current value here -->
-              <span id="speed-label">5×</span>
+            <div class="control-group control-group--playback">
+              <span class="control-group-label">Playback</span>
+              <div class="control-group-buttons">
+                <button id="btn-run" class="btn-primary">▶ Run</button>
+                <button id="btn-step" class="btn-secondary">⏭ Step</button>
+                <button id="btn-auto" class="btn-success">⏩ Auto-Play</button>
+                <button id="btn-pause" class="btn-warning">⏸ Pause</button>
+              </div>
+
+              <!-- Speed slider lives with Auto-Play/Pause since it governs them -->
+              <div class="speed-ctrl">
+                <label for="speed-slider">Speed</label>
+                <input type="range" id="speed-slider" min="1" max="10" value="5" />
+                <!-- ui.js writes the current value here -->
+                <span id="speed-label">5×</span>
+              </div>
             </div>
+
+            <div class="control-divider" aria-hidden="true"></div>
+
+            <div class="control-group control-group--snapshot">
+              <span class="control-group-label">Snapshot</span>
+              <div class="control-group-buttons">
+                <button id="btn-final" class="btn-secondary">⊞ Final Snapshot</button>
+                <button id="btn-reset" class="btn-ghost btn-reset">↺ Reset</button>
+              </div>
+            </div>
+
+            <div class="control-divider" aria-hidden="true"></div>
+
+            <div class="control-group control-group--analysis">
+              <span class="control-group-label">Analysis</span>
+              <div class="control-group-buttons">
+                <button id="btn-compare" class="btn-compare">⇄ Compare Policies</button>
+              </div>
+            </div>
+
           </div>
 
           <!-- Progress bar -->
@@ -239,7 +266,19 @@
           but do NOT put static content here — it gets wiped on every Run/Reset.
         -->
         <div id="cache-grid">
-          <p class="grid-placeholder">Run a simulation to see the cache state.</p>
+          <!-- Default empty state. ui.js wipes/replaces this innerHTML on Run/Reset —
+               nothing here is read by JS, it's purely a first-paint placeholder. -->
+          <div class="grid-placeholder">
+            <svg class="grid-placeholder-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="5" y="5" width="38" height="38" rx="4" stroke="currentColor" stroke-width="2"/>
+              <line x1="5" y1="17" x2="43" y2="17" stroke="currentColor" stroke-width="2"/>
+              <line x1="5" y1="29" x2="43" y2="29" stroke="currentColor" stroke-width="2"/>
+              <line x1="17" y1="5" x2="17" y2="43" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+              <line x1="29" y1="5" x2="29" y2="43" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+            </svg>
+            <p class="grid-placeholder-title">Cache Memory Empty</p>
+            <p class="grid-placeholder-text">Configure your parameters on the left, then<br>press <strong>Run</strong> to populate the cache state.</p>
+          </div>
         </div>
 
       </section><!-- /panel-cache -->
@@ -314,9 +353,20 @@
         ui.js sets it to display:block when Compare is clicked.
         Style the table inside however you like.
       -->
-      <section class="panel" id="compare-panel" style="display:none;">
-        <div class="panel-header">⇄ Policy Comparison — LRU vs. MRU</div>
+      <section class="panel panel--compare" id="compare-panel" style="display:none;">
+        <div class="panel-header">
+          <span class="icon">⇄</span> Policy Comparison
+          <span class="panel-header-tag panel-header-tag--violet">LRU vs. MRU</span>
+        </div>
         <div class="panel-body">
+
+          <!-- Purely decorative — sits above the JS-injected table, does not touch it -->
+          <div class="compare-vs-banner">
+            <span class="compare-side compare-side--lru">LRU<small>Least Recently Used</small></span>
+            <span class="compare-vs">VS</span>
+            <span class="compare-side compare-side--mru">MRU<small>Most Recently Used</small></span>
+          </div>
+
           <!-- 4th Member builds the table data.
             ui.js injects the rendered table HTML into this div.
             Keep id="compare-table".
