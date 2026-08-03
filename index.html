@@ -27,9 +27,10 @@
 
   <!-- HEADER -->
   <header class="app-header">
-    <!-- TODO: Design the header. Keep it simple. -->
+    <span class="logo">SYS // 09</span>
     <h1>Machine 9: 8-Way Set Associative Cache Simulator</h1>
-    <span>CSARCH2 | LRU vs MRU</span>
+    <span class="badge">CSARCH2 · LRU vs MRU</span>
+    <span class="status-pill"><span class="status-dot"></span>Online</span>
   </header>
 
   <!-- MAIN LAYOUT  (sidebar + main content) -->
@@ -131,7 +132,7 @@
               placeholder="e.g. 0, 1, 2, 3, 4, 5 …"
             ></textarea>
           </div>
-          <button id="btn-custom">Use Custom Sequence</button>
+          <button id="btn-custom" class="btn-secondary">Use Custom Sequence</button>
 
           <!--
             Shows a preview of the loaded sequence.
@@ -175,13 +176,13 @@
               Do NOT rename these button IDs.
               2nd Member attaches click listeners to every one of them.
             -->
-            <button id="btn-run">▶ Run</button>
-            <button id="btn-step">⏭ Step</button>
-            <button id="btn-auto">⏩ Auto-Play</button>
-            <button id="btn-pause">⏸ Pause</button>
-            <button id="btn-final">⊞ Final Snapshot</button>
-            <button id="btn-reset">↺ Reset</button>
-            <button id="btn-compare">⇄ Compare Policies</button>
+            <button id="btn-run" class="btn-primary">▶ Run</button>
+            <button id="btn-step" class="btn-secondary">⏭ Step</button>
+            <button id="btn-auto" class="btn-success">⏩ Auto-Play</button>
+            <button id="btn-pause" class="btn-warning">⏸ Pause</button>
+            <button id="btn-final" class="btn-secondary">⊞ Final Snapshot</button>
+            <button id="btn-reset" class="btn-ghost btn-reset">↺ Reset</button>
+            <button id="btn-compare" class="btn-compare">⇄ Compare Policies</button>
 
             <!-- Speed slider for auto-play -->
             <div class="speed-ctrl">
