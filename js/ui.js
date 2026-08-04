@@ -287,6 +287,7 @@ function startAuto() {
 
   DOM.btnAuto.disabled  = true;
   DOM.btnPause.disabled = false;
+  DOM.btnStep.disabled = true;
 
   AppState.animTimer = setInterval(() => {
     const hasMore = stepForward();
@@ -294,6 +295,7 @@ function startAuto() {
       stopAuto();
       DOM.btnStep.disabled = true;
       DOM.btnAuto.disabled = true;
+      DOM.btnCompare.disabled = false; // Auto-play finished — unlock Compare Policies
     }
   }, AppState.animSpeed);
 }
@@ -312,6 +314,9 @@ function stopAuto() {
   // Guard: DOM may not be wired yet on very first call.
   if (DOM.btnAuto)  DOM.btnAuto.disabled  = false;
   if (DOM.btnPause) DOM.btnPause.disabled = true;
+  if (DOM.btnStep && AppState.log && AppState.stepIndex < AppState.log.length) {
+    DOM.btnStep.disabled = false;
+  }
 }
 
 
@@ -486,6 +491,23 @@ function renderFinalCacheGrid() {
 function updateStatsFromLog() {
   const slice = AppState.log.slice(0, AppState.stepIndex);
   const total  = slice.length;
+ 
+  // Update the stats by reseting the values to 0 when the simulation is restarted/
+  // new implementation is placed to avoid confusion with the current implementation
+
+  if (total === 0) {
+    updateStats({
+      totalAccesses: 0,
+      hits:          0,
+      misses:        0,
+      hitRate:       '—',
+      missRate:      '—',
+      amat:          '—',
+      totalTime:     '—',
+    });
+    return;
+  }
+ 
   const hits   = slice.filter(e => e.result === 'HIT').length;
   const misses = total - hits;
 
@@ -645,6 +667,19 @@ function setActiveSeqButton(activeBtn) {
   });
 }
 
+/**
+ * Clear the compare panel back to its initial, hidden state — used by Reset
+ * so a stale LRU/MRU comparison from a previous run doesn't linger on screen.
+ */
+function hideComparePanel() {
+  AppState.compareData = null;
+  AppState.compareView = 'LRU';
+  DOM.compareTable.innerHTML = '';
+  DOM.cmpBtnLru.classList.remove('is-active');
+  DOM.cmpBtnMru.classList.remove('is-active');
+  DOM.comparePanel.style.display = 'none';
+}
+
 // Comparison Rendering
 /**
  * Render the Compare panel for whichever policy is currently toggled
@@ -766,23 +801,33 @@ function wireEvents() {
 
   // Simulation controls
   DOM.btnRun.addEventListener('click', () => {
+    // Guard against a live/paused simulation regardless of the button's
+    // disabled state 
+    if (AppState.log && AppState.log.length > 0) {
+      return;
+    }
+
     const ok = initSimulation();
     if (ok) {
+      DOM.btnRun.disabled   = true; 
       DOM.btnStep.disabled  = false;
       DOM.btnAuto.disabled  = false;
       DOM.btnPause.disabled = true;
       DOM.btnFinal.disabled = false;
       DOM.btnReset.disabled = false;
+      DOM.btnCompare.disabled = true; 
     }
   });
 
   DOM.btnStep.addEventListener('click', () => {
     if (!AppState.log || AppState.log.length === 0) {
       if (!initSimulation()) return;
+      DOM.btnRun.disabled   = true; 
       DOM.btnStep.disabled  = false;
       DOM.btnAuto.disabled  = false;
       DOM.btnFinal.disabled = false;
       DOM.btnReset.disabled = false;
+      DOM.btnCompare.disabled = true; 
     }
     const hasMore = stepForward();
     if (!hasMore) {
@@ -794,9 +839,11 @@ function wireEvents() {
   DOM.btnAuto.addEventListener('click', () => {
     if (!AppState.log || AppState.log.length === 0) {
       if (!initSimulation()) return;
+      DOM.btnRun.disabled   = true; 
       DOM.btnStep.disabled  = false;
       DOM.btnFinal.disabled = false;
       DOM.btnReset.disabled = false;
+      DOM.btnCompare.disabled = true; 
     }
     if (AppState.stepIndex >= AppState.log.length) return; // already finished
     startAuto();
@@ -812,6 +859,7 @@ function wireEvents() {
     DOM.btnAuto.disabled  = true;
     DOM.btnPause.disabled = true;
     DOM.btnReset.disabled = false;
+    DOM.btnCompare.disabled = false;
   });
 
   DOM.btnReset.addEventListener('click', () => {
@@ -829,12 +877,19 @@ function wireEvents() {
     });
     updateProgress(0, 0);
     DOM.currentAccess.textContent = '–';
+    hideComparePanel();
 
+    // Clears the compared analysis when simulation is reset
+    setSequence([]);
+    setActiveSeqButton(null);
+
+    DOM.btnRun.disabled   = false;
     DOM.btnStep.disabled  = true;
     DOM.btnAuto.disabled  = false;
     DOM.btnPause.disabled = true;
     DOM.btnFinal.disabled = true;
     DOM.btnReset.disabled = true;
+    DOM.btnCompare.disabled = true;
   });
 
   DOM.speedSlider.addEventListener('input', () => {
@@ -853,6 +908,10 @@ function wireEvents() {
       alert('Please load a sequence first (Sequential, Mid-Repeat, Random, or Custom).');
       return;
     }
+     if (!AppState.log || AppState.log.length === 0) {         
+    alert('Please run the simulation first (Run, Step, Auto-Play, or Final Snapshot) before comparing policies.');
+    return;
+  }
 
     const cfg = getConfig();
     const baseConfig = {
@@ -895,8 +954,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Disable buttons that require an active simulation
   DOM.btnStep.disabled  = true;
-  DOM.btnAuto.disabled  = false;  // Auto can also trigger init
+  DOM.btnAuto.disabled  = false; 
   DOM.btnPause.disabled = true;
   DOM.btnFinal.disabled = true;
   DOM.btnReset.disabled = true;
+  DOM.btnCompare.disabled = true;
 });
