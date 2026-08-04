@@ -28,8 +28,9 @@
  * @returns {number[]}
  */
 function generateSequential(n) {
-  // TODO: implement this
-  return [];
+  const range = [];
+  for (let i = 0; i < 2 * n; i++) range.push(i);
+  return range.concat(range); // repeat the whole 0..2n-1 range once more
 }
 
 
@@ -53,8 +54,23 @@ function generateSequential(n) {
  * @returns {number[]}
  */
 function generateMidRepeat(n) {
-  // TODO: implement this
-  return [];
+  const part1 = [];
+  for (let i = 0; i < n; i++) part1.push(i);
+
+  const part2 = [];
+  for (let i = 0; i < 2 * n; i++) part2.push(i);
+
+  const part3 = [...part1].reverse(); // n-1 .. 0
+
+  const part4 = [];
+  for (let i = 2 * n - 1; i >= 0; i--) part4.push(i); // 2n-1 .. 0
+
+  return [
+    ...part1,
+    ...part2, ...part2,
+    ...part3,
+    ...part4, ...part4,
+  ];
 }
 
 
@@ -68,8 +84,11 @@ function generateMidRepeat(n) {
  * @returns {number[]} array of 64 random integers
  */
 function generateRandom() {
-  // TODO: implement this
-  return [];
+  const seq = [];
+  for (let i = 0; i < 64; i++) {
+    seq.push(Math.floor(Math.random() * 1024)); // 0..1023 inclusive
+  }
+  return seq;
 }
 
 
@@ -97,6 +116,22 @@ function generateRandom() {
  * @returns {number[]}
  */
 function parseCustomSequence(raw) {
-  // TODO: implement this
-  return [];
+  if (!raw || typeof raw !== 'string') return [];
+
+  const tokens = raw.split(/[\s,]+/).filter(t => t.length > 0);
+  const result = [];
+
+  for (const token of tokens) {
+    const num = Number(token);
+    if (
+      !Number.isNaN(num) &&
+      Number.isInteger(num) &&
+      num >= 0 &&
+      num <= 1023
+    ) {
+      result.push(num);
+    }
+  }
+
+  return result;
 }

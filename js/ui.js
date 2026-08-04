@@ -28,6 +28,9 @@ const AppState = {
   stepIndex:  0,      // how many steps have been shown so far
   animTimer:  null,   // setInterval handle for auto-play (null = not running)
   animSpeed:  600,    // ms between steps during auto-play
+
+  compareData: null,  // { lru: {...}, mru: {...} } from runComparison()
+  compareView: 'LRU', // which policy is currently shown in the compare panel
 };
 
 
@@ -97,6 +100,8 @@ function cacheDOMRefs() {
   // Comparison
   DOM.comparePanel = document.getElementById('compare-panel');
   DOM.compareTable = document.getElementById('compare-table');
+  DOM.cmpBtnLru    = document.getElementById('cmp-btn-lru');
+  DOM.cmpBtnMru    = document.getElementById('cmp-btn-mru');
 }
 
 
@@ -126,7 +131,11 @@ function getConfig() {
 function updateConfigInfo() {
   const cfg     = getConfig();
   const numSets = Math.floor(cfg.numCacheBlocks / 8);
-  // TODO: implement this build the string and write it to DOM.configInfo.innerHTML
+  DOM.configInfo.innerHTML =
+    `${cfg.numCacheBlocks} blocks &middot; 8-way &middot; ` +
+    `${numSets} set${numSets === 1 ? '' : 's'} &middot; ` +
+    `Block size: ${cfg.blockSize} words &middot; ` +
+    `Policy: ${cfg.policy} &middot; Read: ${cfg.readPolicy}`;
 }
 
 
@@ -139,7 +148,15 @@ function updateConfigInfo() {
  */
 function setSequence(seq) {
   AppState.sequence = seq;
-  // TODO: implement this update DOM.seqInput.value and DOM.seqDisplay.textContent
+  DOM.seqInput.value = seq.join(', ');
+
+  if (seq.length === 0) {
+    DOM.seqDisplay.textContent = 'No sequence loaded.';
+  } else {
+    const preview = seq.slice(0, 12).join(', ');
+    const suffix  = seq.length > 12 ? ', …' : '';
+    DOM.seqDisplay.textContent = `${seq.length} accesses: ${preview}${suffix}`;
+  }
 }
 
 
@@ -161,8 +178,33 @@ function setSequence(seq) {
  */
 function initSimulation() {
   stopAuto();
-  // TODO: implement this implement this
-  return false;
+
+  if (!AppState.sequence || AppState.sequence.length === 0) {
+    alert('Please load a sequence first (Sequential, Mid-Repeat, Random, or Custom).');
+    return false;
+  }
+
+  const cfg = getConfig();
+  let engine;
+  try {
+    engine = new CacheEngine(cfg);
+  } catch (err) {
+    alert('Configuration error: ' + err.message);
+    return false;
+  }
+
+  AppState.engine    = engine;
+  AppState.log       = engine.simulate(AppState.sequence);
+  AppState.stepIndex = 0;
+
+  clearLog();
+  const numSets = Math.floor(cfg.numCacheBlocks / 8);
+  renderEmptyCacheGrid(numSets);
+  updateStatsFromLog();
+  updateProgress(0, AppState.log.length);
+  DOM.currentAccess.textContent = '–';
+
+  return true;
 }
 
 
@@ -183,8 +225,22 @@ function initSimulation() {
  * @returns {boolean} true if more steps remain
  */
 function stepForward() {
-  // TODO: implement this implement this
-  return false;
+  if (!AppState.log || AppState.stepIndex >= AppState.log.length) {
+    return false;
+  }
+
+  const entry = AppState.log[AppState.stepIndex];
+  AppState.stepIndex++;
+
+  appendLogEntry(entry);
+  renderCacheState(entry);
+  updateStatsFromLog();
+  updateProgress(AppState.stepIndex, AppState.log.length);
+
+  DOM.currentAccess.textContent =
+    `Access #${entry.accessNum}: Block ${entry.blockAddr} → Set ${entry.setIndex}, Tag ${entry.tag} → ${entry.result}`;
+
+  return AppState.stepIndex < AppState.log.length;
 }
 
 /**
@@ -198,7 +254,23 @@ function stepForward() {
  *   6. Update progress to N/N.
  */
 function showFinalSnapshot() {
-  // TODO: implement this implement this
+  if (!AppState.log || AppState.log.length === 0) {
+    if (!initSimulation()) return;
+  }
+
+  AppState.stepIndex = AppState.log.length;
+
+  clearLog();
+  AppState.log.forEach(appendLogEntry);
+
+  renderFinalCacheGrid();
+  updateStatsFromLog();
+  updateProgress(AppState.log.length, AppState.log.length);
+
+  const last = AppState.log[AppState.log.length - 1];
+  DOM.currentAccess.textContent = last
+    ? `Access #${last.accessNum}: Block ${last.blockAddr} → Set ${last.setIndex}, Tag ${last.tag} → ${last.result}`
+    : '–';
 }
 
 
@@ -211,7 +283,19 @@ function showFinalSnapshot() {
  * Update button disabled states (Pause enabled, Auto disabled).
  */
 function startAuto() {
-  // TODO: implement this implement this
+  if (AppState.animTimer) return; // already running
+
+  DOM.btnAuto.disabled  = true;
+  DOM.btnPause.disabled = false;
+
+  AppState.animTimer = setInterval(() => {
+    const hasMore = stepForward();
+    if (!hasMore) {
+      stopAuto();
+      DOM.btnStep.disabled = true;
+      DOM.btnAuto.disabled = true;
+    }
+  }, AppState.animSpeed);
 }
 
 /**
@@ -221,7 +305,13 @@ function startAuto() {
  * Update button disabled states (Pause disabled, Auto enabled).
  */
 function stopAuto() {
-  // TODO: implement this implement this
+  if (AppState.animTimer) {
+    clearInterval(AppState.animTimer);
+    AppState.animTimer = null;
+  }
+  // Guard: DOM may not be wired yet on very first call.
+  if (DOM.btnAuto)  DOM.btnAuto.disabled  = false;
+  if (DOM.btnPause) DOM.btnPause.disabled = true;
 }
 
 
@@ -238,7 +328,14 @@ function stopAuto() {
  * @param {number} numSets
  */
 function renderEmptyCacheGrid(numSets) {
-  // TODO: implement this implement this
+  DOM.cacheGrid.innerHTML = '';
+
+  const emptyLine = { valid: false, tag: null, blockNum: null, order: 0 };
+  const emptyLines = Array.from({ length: WAYS }, () => emptyLine);
+
+  for (let s = 0; s < numSets; s++) {
+    DOM.cacheGrid.appendChild(buildSetCardEl(s, emptyLines, {}, 'cache-set'));
+  }
 }
 
 /**
@@ -253,10 +350,68 @@ function renderEmptyCacheGrid(numSets) {
  * @returns {HTMLElement}
  */
 function buildCacheLineEl(setIdx, wayIdx, lineData, highlight) {
-  // TODO: implement this implement this
   const el = document.createElement('div');
   el.className = 'cache-line';
+
+  if (highlight === 'hit')     el.classList.add('cache-hit');
+  if (highlight === 'miss')    el.classList.add('cache-miss');
+  if (highlight === 'evicted') el.classList.add('cache-evicted');
+
+  const wayCell   = document.createElement('span');
+  wayCell.className = 'cl-way';
+  wayCell.textContent = `W${wayIdx}`;
+
+  const validCell = document.createElement('span');
+  validCell.className = 'cl-valid ' + (lineData.valid ? 'valid-yes' : 'valid-no');
+  validCell.textContent = lineData.valid ? '1' : '0';
+
+  const tagCell   = document.createElement('span');
+  tagCell.className = 'cl-tag';
+  tagCell.textContent = lineData.valid ? lineData.tag : '—';
+
+  const blockCell = document.createElement('span');
+  blockCell.className = 'cl-block';
+  blockCell.textContent = lineData.valid ? lineData.blockNum : '—';
+
+  const orderCell = document.createElement('span');
+  orderCell.className = 'cl-order';
+  orderCell.textContent = lineData.valid ? lineData.order : '—';
+
+  el.appendChild(wayCell);
+  el.appendChild(validCell);
+  el.appendChild(tagCell);
+  el.appendChild(blockCell);
+  el.appendChild(orderCell);
+
   return el;
+}
+
+/**
+ * Build one .cache-set card (header + 8 .cache-line rows) for a given set.
+ * Shared by the main grid, the final-snapshot grid, and the compare panel.
+ *
+ * @param {number} setIdx
+ * @param {Object[]} setLines     - 8 line objects { valid, tag, blockNum, order }
+ * @param {Object} highlightMap   - { [wayIdx]: 'hit'|'miss'|'evicted' }
+ * @param {string} idPrefix       - DOM id prefix so multiple grids can coexist
+ * @returns {HTMLElement}
+ */
+function buildSetCardEl(setIdx, setLines, highlightMap, idPrefix) {
+  const card = document.createElement('div');
+  card.className = 'cache-set';
+  card.id = `${idPrefix}-${setIdx}`;
+
+  const header = document.createElement('div');
+  header.className = 'set-header';
+  header.textContent = `Set ${setIdx}`;
+  card.appendChild(header);
+
+  for (let way = 0; way < WAYS; way++) {
+    const highlight = highlightMap[way] || 'none';
+    card.appendChild(buildCacheLineEl(setIdx, way, setLines[way], highlight));
+  }
+
+  return card;
 }
 
 /**
@@ -273,7 +428,29 @@ function buildCacheLineEl(setIdx, wayIdx, lineData, highlight) {
  * @param {Object} entry - log entry from access()
  */
 function renderCacheState(entry) {
-  // TODO: implement this implement this
+  const highlightMap = {};
+
+  if (entry.result === 'HIT') {
+    highlightMap[entry.hitLine] = 'hit';
+  } else if (entry.evicted) {
+    // this way was both the eviction target AND the load destination
+    highlightMap[entry.evicted.line] = 'evicted';
+  } else if (entry.loadedLine !== null) {
+    highlightMap[entry.loadedLine] = 'miss';
+  }
+
+  const newCard = buildSetCardEl(entry.setIndex, entry.snapshot, highlightMap, 'cache-set');
+  const oldCard = document.getElementById(`cache-set-${entry.setIndex}`);
+
+  if (oldCard) {
+    oldCard.replaceWith(newCard);
+  } else {
+    DOM.cacheGrid.appendChild(newCard);
+  }
+
+  if (newCard.scrollIntoView) {
+    newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 /**
@@ -283,7 +460,14 @@ function renderCacheState(entry) {
  * No highlights needed (this is a static final view).
  */
 function renderFinalCacheGrid() {
-  // TODO: implement this implement this
+  if (!AppState.engine) return;
+
+  const state = AppState.engine.getCacheState(); // 2D array [numSets][ways]
+  DOM.cacheGrid.innerHTML = '';
+
+  state.forEach((setLines, idx) => {
+    DOM.cacheGrid.appendChild(buildSetCardEl(idx, setLines, {}, 'cache-set'));
+  });
 }
 
 
@@ -300,7 +484,33 @@ function renderFinalCacheGrid() {
  *   load-through:     AMAT = (hitRate × 1) + (missRate × 10)
  */
 function updateStatsFromLog() {
-  // TODO: implement this implement this
+  const slice = AppState.log.slice(0, AppState.stepIndex);
+  const total  = slice.length;
+  const hits   = slice.filter(e => e.result === 'HIT').length;
+  const misses = total - hits;
+
+  const hitRateRaw  = total > 0 ? hits / total : 0;
+  const missRateRaw = total > 0 ? misses / total : 0;
+
+  const readPolicy = AppState.engine ? AppState.engine.readPolicy : 'non-load-through';
+  const Tc = 1;
+  const Tm = 10;
+
+  const amatRaw = readPolicy === 'load-through'
+    ? (hitRateRaw * Tc) + (missRateRaw * Tm)
+    : Tc + (missRateRaw * Tm);
+
+  const totalTimeRaw = total * amatRaw;
+
+  updateStats({
+    totalAccesses: total,
+    hits:          hits,
+    misses:        misses,
+    hitRate:       `${(hitRateRaw * 100).toFixed(2)}%`,
+    missRate:      `${(missRateRaw * 100).toFixed(2)}%`,
+    amat:          `${amatRaw.toFixed(4)} ns`,
+    totalTime:     `${totalTimeRaw.toFixed(2)} ns`,
+  });
 }
 
 /**
@@ -369,27 +579,134 @@ function clearLog() {
  *
  * @param {Object} entry - log entry from access()
  */
+/**
+ * Build one .log-entry element for a given log entry.
+ * Shared by the main log panel and the compare panel's full log.
+ * @param {Object} entry - log entry from access()
+ * @returns {HTMLElement}
+ */
+function buildLogEntryEl(entry) {
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + (entry.result === 'HIT' ? 'log-hit' : 'log-miss');
+
+  const header = document.createElement('div');
+  header.className = 'log-header';
+
+  const num = document.createElement('span');
+  num.className = 'log-num';
+  num.textContent = `Access #${entry.accessNum}`;
+
+  const badge = document.createElement('span');
+  badge.className = 'log-badge ' + (entry.result === 'HIT' ? 'log-badge-hit' : 'log-badge-miss');
+  badge.textContent = entry.result;
+
+  header.appendChild(num);
+  header.appendChild(badge);
+
+  const body = document.createElement('div');
+  body.className = 'log-body';
+  body.innerHTML =
+    `Block <strong>${entry.blockAddr}</strong> → Set ${entry.setIndex}, Tag ${entry.tag}` +
+    ` &middot; Policy: ${entry.policy} &middot; Read: ${entry.readPolicy}` +
+    (entry.result === 'HIT'
+      ? ` &middot; Hit in way ${entry.hitLine}`
+      : ` &middot; Loaded into way ${entry.loadedLine}`);
+
+  div.appendChild(header);
+  div.appendChild(body);
+
+  if (entry.evicted) {
+    const evictLine = document.createElement('div');
+    evictLine.className = 'log-evict';
+    evictLine.textContent =
+      `⚠ Evicted way ${entry.evicted.line}: block ${entry.evicted.blockNum} ` +
+      `(tag ${entry.evicted.tag}) — ${entry.evicted.reason}`;
+    div.appendChild(evictLine);
+  }
+
+  return div;
+}
+
 function appendLogEntry(entry) {
-  // TODO: implement this implement this
+  DOM.logContainer.appendChild(buildLogEntryEl(entry));
+  DOM.logContainer.scrollTop = DOM.logContainer.scrollHeight;
 }
 
 
+/**
+ * Highlight the active preset button in the Sequential/Mid-Repeat/Random
+ * segmented control (.seq-type-btns .is-active). Pass null to clear all
+ * (used when a custom sequence is loaded instead).
+ * @param {HTMLElement|null} activeBtn
+ */
+function setActiveSeqButton(activeBtn) {
+  [DOM.seqBtnSeq, DOM.seqBtnMid, DOM.seqBtnRand].forEach(btn => {
+    btn.classList.toggle('is-active', btn === activeBtn);
+  });
+}
+
 // Comparison Rendering
 /**
- * // TODO: implement this
- * Render the comparison table from buildComparisonTable() rows.
- * Show #compare-panel (set display to 'block').
- * Build an HTML <table> from the rows array and inject into #compare-table.
- *
- * Table columns: Metric | LRU | MRU | Better
- * Apply .winner-cell to the better value's cell.
- * Apply .winner-badge + .win-lru or .win-mru to the Better cell.
- * Scroll the comparison panel into view when done.
- *
- * @param {Object[]} rows - from buildComparisonTable()
+ * Render the Compare panel for whichever policy is currently toggled
+ * (AppState.compareView: 'LRU' or 'MRU'). Both engines already ran on
+ * the same sequence via runComparison() — this only decides which one's
+ * full results (stats + final cache grid + full log) get shown.
+ * LRU and MRU are never displayed side by side.
  */
-function renderComparisonTable(rows) {
-  // TODO: implement this implement this
+function renderComparePanel() {
+  if (!AppState.compareData) return;
+
+  DOM.comparePanel.style.display = 'block';
+
+  const view = AppState.compareView; // 'LRU' or 'MRU'
+  const data = view === 'LRU' ? AppState.compareData.lru : AppState.compareData.mru;
+
+  // Toggle button active state — reuses the same .is-active pattern as
+  // the Sequential/Mid-Repeat/Random segmented control.
+  DOM.cmpBtnLru.classList.toggle('is-active', view === 'LRU');
+  DOM.cmpBtnMru.classList.toggle('is-active', view === 'MRU');
+
+  // One-line "which policy wins overall" summary, based on AMAT (lower is better).
+  const rows = buildComparisonTable(AppState.compareData);
+  const amatRow = rows.find(r => r.metric === 'AMAT');
+  const viewedSpan = `<span class="win-${view.toLowerCase()}">${data.policy}</span>`;
+  const summaryText = amatRow.winner === 'tie'
+    ? `Currently viewing ${viewedSpan}. Both policies tie on AMAT for this sequence.`
+    : `Currently viewing ${viewedSpan}. Faster overall (lower AMAT): <span class="win-${amatRow.winner.toLowerCase()}">${amatRow.winner}</span>.`;
+
+  // Rebuild the panel body for the selected policy only.
+  DOM.compareTable.innerHTML = `
+    <div class="compare-summary">${summaryText}</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total Accesses</div><div class="stat-value">${data.stats.totalAccesses}</div></div>
+      <div class="stat-card cmp-stat-hits"><div class="stat-label">Cache Hits</div><div class="stat-value">${data.stats.hits}</div></div>
+      <div class="stat-card cmp-stat-misses"><div class="stat-label">Cache Misses</div><div class="stat-value">${data.stats.misses}</div></div>
+      <div class="stat-card cmp-stat-hit-rate"><div class="stat-label">Hit Rate</div><div class="stat-value">${data.stats.hitRate}</div></div>
+      <div class="stat-card cmp-stat-miss-rate"><div class="stat-label">Miss Rate</div><div class="stat-value">${data.stats.missRate}</div></div>
+      <div class="stat-card"><div class="stat-label">AMAT</div><div class="stat-value">${data.stats.amat}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Access Time</div><div class="stat-value">${data.stats.totalTime}</div></div>
+    </div>
+    <div class="compare-subheader">Final Cache State — ${data.policy}</div>
+    <div id="compare-grid"></div>
+    <div class="compare-subheader">Full Access Log — ${data.policy}</div>
+    <div id="compare-log"></div>
+  `;
+
+  // Populate the final cache grid for this policy.
+  const gridEl = document.getElementById('compare-grid');
+  data.finalState.forEach((setLines, idx) => {
+    gridEl.appendChild(buildSetCardEl(idx, setLines, {}, 'cmp-set'));
+  });
+
+  // Populate the full log for this policy.
+  const logEl = document.getElementById('compare-log');
+  data.log.forEach(entry => {
+    logEl.appendChild(buildLogEntryEl(entry));
+  });
+
+  if (DOM.comparePanel.scrollIntoView) {
+    DOM.comparePanel.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 
@@ -421,60 +738,151 @@ function wireEvents() {
 
   // Sequence buttons
   DOM.seqBtnSeq.addEventListener('click', () => {
-    // TODO: implement this get n from DOM.numBlocks.value, call generateSequential(n)
+    const n = parseInt(DOM.numBlocks.value, 10);
+    setSequence(generateSequential(n));
+    setActiveSeqButton(DOM.seqBtnSeq);
   });
 
   DOM.seqBtnMid.addEventListener('click', () => {
-    // TODO: implement this get n from DOM.numBlocks.value, call generateMidRepeat(n)
+    const n = parseInt(DOM.numBlocks.value, 10);
+    setSequence(generateMidRepeat(n));
+    setActiveSeqButton(DOM.seqBtnMid);
   });
 
   DOM.seqBtnRand.addEventListener('click', () => {
-    // TODO: implement this call generateRandom()
+    setSequence(generateRandom());
+    setActiveSeqButton(DOM.seqBtnRand);
   });
 
   DOM.seqBtnCustom.addEventListener('click', () => {
-    // TODO: implement this call parseCustomSequence(DOM.seqInput.value)
-    //               alert if result is empty
+    const parsed = parseCustomSequence(DOM.seqInput.value);
+    if (parsed.length === 0) {
+      alert('No valid block addresses found. Enter integers from 0–1023, separated by commas or spaces.');
+      return;
+    }
+    setSequence(parsed);
+    setActiveSeqButton(null); // custom sequence — none of the three presets apply
   });
 
   // Simulation controls
   DOM.btnRun.addEventListener('click', () => {
-    // TODO: implement this call initSimulation(), enable buttons on success
+    const ok = initSimulation();
+    if (ok) {
+      DOM.btnStep.disabled  = false;
+      DOM.btnAuto.disabled  = false;
+      DOM.btnPause.disabled = true;
+      DOM.btnFinal.disabled = false;
+      DOM.btnReset.disabled = false;
+    }
   });
 
   DOM.btnStep.addEventListener('click', () => {
-    // TODO: implement this call stepForward(), disable buttons if done
+    if (!AppState.log || AppState.log.length === 0) {
+      if (!initSimulation()) return;
+      DOM.btnStep.disabled  = false;
+      DOM.btnAuto.disabled  = false;
+      DOM.btnFinal.disabled = false;
+      DOM.btnReset.disabled = false;
+    }
+    const hasMore = stepForward();
+    if (!hasMore) {
+      DOM.btnStep.disabled = true;
+      DOM.btnAuto.disabled = true;
+    }
   });
 
   DOM.btnAuto.addEventListener('click', () => {
-    // TODO: implement this call initSimulation() if log is empty, then startAuto()
+    if (!AppState.log || AppState.log.length === 0) {
+      if (!initSimulation()) return;
+      DOM.btnStep.disabled  = false;
+      DOM.btnFinal.disabled = false;
+      DOM.btnReset.disabled = false;
+    }
+    if (AppState.stepIndex >= AppState.log.length) return; // already finished
+    startAuto();
   });
 
   DOM.btnPause.addEventListener('click', () => {
-    // TODO: implement this call stopAuto()
+    stopAuto();
   });
 
   DOM.btnFinal.addEventListener('click', () => {
-    // TODO: implement this call showFinalSnapshot()
+    showFinalSnapshot();
+    DOM.btnStep.disabled  = true;
+    DOM.btnAuto.disabled  = true;
+    DOM.btnPause.disabled = true;
+    DOM.btnReset.disabled = false;
   });
 
   DOM.btnReset.addEventListener('click', () => {
-    // TODO: implement this stop auto, reset AppState, clear all DOM panels,
-    //               disable step/auto/final/reset buttons
+    stopAuto();
+
+    AppState.engine    = null;
+    AppState.log       = [];
+    AppState.stepIndex = 0;
+
+    clearLog();
+    DOM.cacheGrid.innerHTML = '<p class="grid-placeholder">Run a simulation to see the cache state.</p>';
+    updateStats({
+      totalAccesses: '—', hits: '—', misses: '—',
+      hitRate: '—', missRate: '—', amat: '—', totalTime: '—',
+    });
+    updateProgress(0, 0);
+    DOM.currentAccess.textContent = '–';
+
+    DOM.btnStep.disabled  = true;
+    DOM.btnAuto.disabled  = false;
+    DOM.btnPause.disabled = true;
+    DOM.btnFinal.disabled = true;
+    DOM.btnReset.disabled = true;
   });
 
   DOM.speedSlider.addEventListener('input', () => {
     const val = parseInt(DOM.speedSlider.value, 10);
-    // TODO: implement this convert val (1–10) to ms delay (e.g. 1050 - val*100)
-    //               update DOM.speedLabel, restart auto if running
+    AppState.animSpeed = 1050 - val * 100; // 1–10 -> slower..faster
+    DOM.speedLabel.textContent = `${val}×`;
+
+    if (AppState.animTimer) {
+      stopAuto();
+      startAuto();
+    }
   });
 
   DOM.btnCompare.addEventListener('click', () => {
-    // TODO: implement this
-    //   1. Alert if AppState.sequence is empty.
-    //   2. Call runComparison(AppState.sequence, getConfig()).
-    //   3. Call buildComparisonTable(comparison).
-    //   4. Call renderComparisonTable(rows).
+    if (!AppState.sequence || AppState.sequence.length === 0) {
+      alert('Please load a sequence first (Sequential, Mid-Repeat, Random, or Custom).');
+      return;
+    }
+
+    const cfg = getConfig();
+    const baseConfig = {
+      numCacheBlocks: cfg.numCacheBlocks,
+      blockSize:      cfg.blockSize,
+      readPolicy:     cfg.readPolicy,
+    };
+
+    try {
+      AppState.compareData = runComparison(AppState.sequence, baseConfig);
+    } catch (err) {
+      alert('Comparison error: ' + err.message);
+      return;
+    }
+
+    AppState.compareView = 'LRU'; // always start on LRU when a new comparison runs
+    renderComparePanel();
+  });
+
+  // Compare panel toggle buttons — switch which single policy is displayed
+  DOM.cmpBtnLru.addEventListener('click', () => {
+    if (!AppState.compareData) return;
+    AppState.compareView = 'LRU';
+    renderComparePanel();
+  });
+
+  DOM.cmpBtnMru.addEventListener('click', () => {
+    if (!AppState.compareData) return;
+    AppState.compareView = 'MRU';
+    renderComparePanel();
   });
 }
 

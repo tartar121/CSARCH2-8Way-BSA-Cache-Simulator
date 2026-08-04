@@ -146,11 +146,8 @@
 
 
       <!-- PANEL: Fixed Parameters (read-only info) -->
-      <section class="panel panel--reference" id="panel-fixed">
-        <div class="panel-header">
-          <span class="icon">▤</span> Fixed Parameters
-          <span class="panel-header-tag">Read-only</span>
-        </div>
+      <section class="panel" id="panel-fixed">
+        <div class="panel-header"> Fixed Parameters</div>
         <div class="panel-body">
           <!-- 1st Member: Style this as a small info table or list -->
           <ul class="fixed-params">
@@ -176,48 +173,23 @@
           <div class="sim-controls">
             <!--
               IMPORTANT FOR 1st Member:
-              Do NOT rename these button IDs.
               2nd Member attaches click listeners to every one of them.
-              Grouping below is purely structural/CSS — every id is unchanged.
             -->
+            <button id="btn-run" class="btn-primary">▶ Run</button>
+            <button id="btn-step" class="btn-secondary">⏭ Step</button>
+            <button id="btn-auto" class="btn-success">⏩ Auto-Play</button>
+            <button id="btn-pause" class="btn-warning">⏸ Pause</button>
+            <button id="btn-final" class="btn-secondary">⊞ Final Snapshot</button>
+            <button id="btn-reset" class="btn-ghost btn-reset">↺ Reset</button>
+            <button id="btn-compare" class="btn-compare">⇄ Compare Policies</button>
 
-            <div class="control-group control-group--playback">
-              <span class="control-group-label">Playback</span>
-              <div class="control-group-buttons">
-                <button id="btn-run" class="btn-primary">▶ Run</button>
-                <button id="btn-step" class="btn-secondary">⏭ Step</button>
-                <button id="btn-auto" class="btn-success">⏩ Auto-Play</button>
-                <button id="btn-pause" class="btn-warning">⏸ Pause</button>
-              </div>
-
-              <!-- Speed slider lives with Auto-Play/Pause since it governs them -->
-              <div class="speed-ctrl">
-                <label for="speed-slider">Speed</label>
-                <input type="range" id="speed-slider" min="1" max="10" value="5" />
-                <!-- ui.js writes the current value here -->
-                <span id="speed-label">5×</span>
-              </div>
+            <!-- Speed slider for auto-play -->
+            <div class="speed-ctrl">
+              <label for="speed-slider">Speed</label>
+              <input type="range" id="speed-slider" min="1" max="10" value="5" />
+              <!-- ui.js writes the current value here -->
+              <span id="speed-label">5×</span>
             </div>
-
-            <div class="control-divider" aria-hidden="true"></div>
-
-            <div class="control-group control-group--snapshot">
-              <span class="control-group-label">Snapshot</span>
-              <div class="control-group-buttons">
-                <button id="btn-final" class="btn-secondary">⊞ Final Snapshot</button>
-                <button id="btn-reset" class="btn-ghost btn-reset">↺ Reset</button>
-              </div>
-            </div>
-
-            <div class="control-divider" aria-hidden="true"></div>
-
-            <div class="control-group control-group--analysis">
-              <span class="control-group-label">Analysis</span>
-              <div class="control-group-buttons">
-                <button id="btn-compare" class="btn-compare">⇄ Compare Policies</button>
-              </div>
-            </div>
-
           </div>
 
           <!-- Progress bar -->
@@ -266,19 +238,7 @@
           but do NOT put static content here — it gets wiped on every Run/Reset.
         -->
         <div id="cache-grid">
-          <!-- Default empty state. ui.js wipes/replaces this innerHTML on Run/Reset —
-               nothing here is read by JS, it's purely a first-paint placeholder. -->
-          <div class="grid-placeholder">
-            <svg class="grid-placeholder-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="5" y="5" width="38" height="38" rx="4" stroke="currentColor" stroke-width="2"/>
-              <line x1="5" y1="17" x2="43" y2="17" stroke="currentColor" stroke-width="2"/>
-              <line x1="5" y1="29" x2="43" y2="29" stroke="currentColor" stroke-width="2"/>
-              <line x1="17" y1="5" x2="17" y2="43" stroke="currentColor" stroke-width="2" opacity="0.5"/>
-              <line x1="29" y1="5" x2="29" y2="43" stroke="currentColor" stroke-width="2" opacity="0.5"/>
-            </svg>
-            <p class="grid-placeholder-title">Cache Memory Empty</p>
-            <p class="grid-placeholder-text">Configure your parameters on the left, then<br>press <strong>Run</strong> to populate the cache state.</p>
-          </div>
+          <p class="grid-placeholder">Run a simulation to see the cache state.</p>
         </div>
 
       </section><!-- /panel-cache -->
@@ -353,26 +313,30 @@
         ui.js sets it to display:block when Compare is clicked.
         Style the table inside however you like.
       -->
-      <section class="panel panel--compare" id="compare-panel" style="display:none;">
+      <section class="panel panel--compare" id="compare-panel">
         <div class="panel-header">
-          <span class="icon">⇄</span> Policy Comparison
-          <span class="panel-header-tag panel-header-tag--violet">LRU vs. MRU</span>
+          ⇄ Policy Comparison — LRU vs. MRU
+          <span class="panel-header-tag panel-header-tag--violet">single-policy view</span>
         </div>
         <div class="panel-body">
-
-          <!-- Purely decorative — sits above the JS-injected table, does not touch it -->
-          <div class="compare-vs-banner">
-            <span class="compare-side compare-side--lru">LRU<small>Least Recently Used</small></span>
-            <span class="compare-vs">VS</span>
-            <span class="compare-side compare-side--mru">MRU<small>Most Recently Used</small></span>
+          <!-- Toggle: switches which single policy's full results (stats,
+            cache grid, log) are shown below. Both engines already ran on
+            the same sequence; this only changes which one is displayed.
+            Reuses the existing .seq-type-btns segmented-control styling
+            and .is-active state — no new button CSS needed.
+          -->
+          <div class="seq-type-btns">
+            <button id="cmp-btn-lru" type="button">LRU</button>
+            <button id="cmp-btn-mru" type="button">MRU</button>
           </div>
 
-          <!-- 4th Member builds the table data.
-            ui.js injects the rendered table HTML into this div.
+          <!-- 4th Member builds the comparison data (comparison.js).
+            ui.js injects the summary + stats + grid + log HTML for
+            whichever policy is currently toggled into this div.
             Keep id="compare-table".
           -->
           <div id="compare-table">
-            <!-- Table injected by ui.js / comparison.js -->
+            <!-- Injected by ui.js -->
           </div>
         </div>
       </section><!-- /compare-panel -->
@@ -461,8 +425,34 @@
       .log-evict      -> eviction detail line (amber)
 
   COMPARISON
-    #compare-panel    -> <section>  hidden by default, shown on compare
-    #compare-table    -> <div>      ui.js injects table HTML here
+    #compare-panel    -> <section>  hidden by default via CSS (#compare-panel
+                                     { display:none }), ui.js sets
+                                     style.display='block' when Compare runs
+    #cmp-btn-lru      -> <button>   switch compare view to show LRU only
+    #cmp-btn-mru      -> <button>   switch compare view to show MRU only
+                          (both live inside a .seq-type-btns wrapper, same
+                          segmented-control styling as the sequence-type
+                          buttons above; the selected one gets .is-active,
+                          just like #btn-seq/#btn-mid/#btn-rand do)
+    #compare-table    -> <div>      ui.js injects ONE policy's full results
+                                     here (summary line + stat cards + final
+                                     cache grid + full log). Only the policy
+                                     selected via the toggle is shown at a
+                                     time — LRU and MRU are never rendered
+                                     side by side.
+    CSS classes used inside #compare-table (see style.css "Compare Panel —
+    Single-Policy Toggle View" section for the handful that are new;
+    everything else reuses existing .stats-grid/.stat-card/.cache-set/
+    .log-entry styling):
+      .compare-summary  -> one-line "faster overall" callout
+      .compare-subheader -> section labels ("Final Cache State — LRU")
+      .win-lru / .win-mru -> (already existed) colors the policy name
+                              cyan (LRU) or violet (MRU) inside the summary
+      #compare-grid     -> mirrors #cache-grid's layout (new ID, can't
+                            reuse #cache-grid itself, but same .cache-set/
+                            .cache-line child classes)
+      #compare-log      -> mirrors #log-container's layout (new ID, same
+                            .log-entry child classes)
   -->
 
 </body>

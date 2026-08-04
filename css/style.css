@@ -818,6 +818,53 @@ input[type="range"] {
 .win-lru { color: var(--accent-cyan);   }
 .win-mru { color: var(--accent-violet); }
 
+/* Compare Panel — Single-Policy Toggle View
+   Added for the LRU/MRU toggle. */
+   
+#compare-grid {
+  display:    flex;
+  flex-wrap:  wrap;
+  gap:        12px;
+  padding:    12px 0 4px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+#compare-log {
+  font-family:    var(--font-mono);
+  font-size:      12px;
+  max-height:     380px;
+  overflow-y:     auto;
+  padding:        4px 0;
+  display:        flex;
+  flex-direction: column;
+  gap:            4px;
+}
+.compare-summary {
+  font-family:   var(--font-mono);
+  font-size:     13px;
+  color:         var(--text-primary);
+  padding:       10px 16px;
+  background:    rgba(167,139,250,0.06);
+  border:        1px solid rgba(167,139,250,0.25);
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+.compare-subheader {
+  font-size:      10px;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color:          var(--text-muted);
+  margin:         18px 0 6px;
+}
+/* Mirrors the #stat-hits / #stat-misses / #stat-hit-rate / #stat-miss-rate
+   ID rules above — same colors, applied via class since these stat cards
+   live inside #compare-table and can't reuse those unique IDs. */
+.cmp-stat-hits .stat-value,
+.cmp-stat-hit-rate .stat-value  { color: var(--accent-green); }
+.cmp-stat-misses .stat-value,
+.cmp-stat-miss-rate .stat-value { color: var(--accent-red); }
+
 /* Legend */
 .legend {
   display:     flex;
