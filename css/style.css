@@ -437,6 +437,7 @@ input[type="range"] {
 
 /* Progress Bar */
 .progress-wrap {
+  margin-top:    10px;
   background:    var(--bg-input);
   border-radius: 4px;
   height:        8px;
