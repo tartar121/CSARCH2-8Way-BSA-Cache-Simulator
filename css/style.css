@@ -1,6 +1,6 @@
 /*
    style.css for Machine 9: 8-Way Set Associative Cache Simulator
-   Design language: HUD / status-panel — dark hardware-monitor aesthetic.
+   Design language: HUD / status-panel - dark hardware-monitor aesthetic.
    Semantic color system: cyan = active/selected, green = hit,
    red = miss, amber = evicted, violet = MRU / comparison mode.
 */
@@ -189,7 +189,7 @@ textarea:focus-visible {
   background:  rgba(167,139,250,0.08);
 }
 
-/* Fixed Parameters — reads as a reference sheet, not an interactive config panel */
+/* Fixed Parameters - reads as a reference sheet, not an interactive config panel */
 .panel--reference {
   background: var(--bg-panel);
 }
@@ -247,7 +247,7 @@ textarea {
   line-height:  1.7;
 }
 
-/* Fixed Parameters — read-only spec sheet */
+/* Fixed Parameters - read-only spec sheet */
 .fixed-params {
   list-style: none;
   display:    flex;
@@ -272,6 +272,14 @@ textarea {
   color:       var(--accent-cyan);
   font-weight: 700;
   white-space: nowrap;
+}
+#panel-members .fixed-params li {
+  justify-content: flex-start;
+}
+
+#panel-members .fixed-params li span {
+  color: var(--accent-cyan);
+  font-size: 12px;
 }
 
 /* Buttons */
@@ -318,7 +326,7 @@ button:not(:disabled):active { transform: translateY(0) scale(0.97); }
   background:   rgba(255, 92, 92, 0.08);
 }
 
-/* Sequence type buttons — segmented control */
+/* Sequence type buttons - segmented control */
 .seq-type-btns {
   display:       flex;
   gap:           4px;
@@ -355,7 +363,7 @@ button:not(:disabled):active { transform: translateY(0) scale(0.97); }
   line-height: 1.4;
 }
 
-/* Simulation Controls Row — grouped into Playback / Snapshot / Analysis clusters */
+/* Simulation Controls Row - grouped into Playback / Snapshot / Analysis clusters */
 .sim-controls {
   display:       flex;
   flex-wrap:     wrap;
@@ -382,14 +390,14 @@ button:not(:disabled):active { transform: translateY(0) scale(0.97); }
   flex-wrap: wrap;
   gap:       6px;
 }
-/* Vertical rule between clusters — becomes a horizontal rule on narrow screens */
+/* Vertical rule between clusters - becomes a horizontal rule on narrow screens */
 .control-divider {
   width:      1px;
   align-self: stretch;
   min-height: 28px;
   background: var(--border);
 }
-/* Analysis (Compare Policies) is the important secondary feature — push it to the end */
+/* Analysis (Compare Policies) is the important secondary feature - push it to the end */
 .control-group--analysis { margin-left: auto; }
 
 .speed-ctrl {
@@ -493,14 +501,14 @@ input[type="range"] {
 /* Column headers for the cache grid */
 .cache-col-headers {
   display:        grid;
-  grid-template-columns: 32px 28px 52px 64px 48px;
+  grid-template-columns: 36px 36px 60px 72px 52px;
   gap:            4px;
-  padding:        0 12px 8px;
+  padding:        8px 16px 6px;
   font-size:      10px;
   font-family:    var(--font-mono);
   color:          var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   border-bottom:  1px solid var(--border);
   margin-bottom:  8px;
 }
@@ -538,7 +546,7 @@ input[type="range"] {
   letter-spacing: 0.06em;
   border-bottom:  1px solid var(--border);
 }
-/* status LED — reflects the set's current hit/miss/evicted state */
+/* status LED - reflects the set's current hit/miss/evicted state */
 .set-header::before {
   content:       "";
   position:      absolute;
@@ -579,7 +587,7 @@ input[type="range"] {
 .valid-yes { color: var(--accent-green); font-weight: 700; }
 .valid-no  { color: var(--text-muted); }
 
-/* Hit/Miss/Evicted highlights — background + left accent + trailing icon,
+/* Hit/Miss/Evicted highlights - background + left accent + trailing icon,
    so the state reads even without relying on color alone */
 .cache-hit     { background: rgba(61,220,132,0.10) !important; border-left-color: var(--accent-green); animation: line-flash-green 0.6s ease-out; }
 .cache-miss    { background: rgba(255,92,92,0.10)  !important; border-left-color: var(--accent-red);   animation: line-flash-red 0.6s ease-out; }
@@ -635,21 +643,21 @@ input[type="range"] {
   transition:  color 0.2s;
 }
 /* NOTE: id and .stat-value class live on the same element (see index.html),
-   so these must be plain ID selectors, not "#id .stat-value" descendant rules —
+   so these must be plain ID selectors, not "#id .stat-value" descendant rules -
    the old descendant form never matched and these colors never actually applied. */
 #stat-hits      { color: var(--accent-green); }
 #stat-misses    { color: var(--accent-red);   }
 #stat-hit-rate  { color: var(--accent-green); }
 #stat-miss-rate { color: var(--accent-red); }
 
-/* Thin top accent per metric — reinforces semantic color without extra ink */
+/* Thin top accent per metric - reinforces semantic color without extra ink */
 .stat-card { border-top: 2px solid transparent; }
 .stat-card:has(#stat-hits)      { border-top-color: rgba(61,220,132,0.4); }
 .stat-card:has(#stat-misses)    { border-top-color: rgba(255,92,92,0.4);  }
 .stat-card:has(#stat-hit-rate)  { border-top-color: var(--accent-cyan); }
 .stat-card:has(#stat-miss-rate) { border-top-color: rgba(255,92,92,0.4);  }
 
-/* Hit Rate is the headline number — give it top billing, full width, first position */
+/* Hit Rate is the headline number - give it top billing, full width, first position */
 .stats-grid .stat-card:has(#stat-hit-rate) {
   order:         -1;
   grid-column:   1 / -1;
@@ -804,12 +812,39 @@ input[type="range"] {
   letter-spacing: 0.06em;
   background:     var(--bg-panel);
 }
+.comp-table thead th.win-lru { color: var(--accent-cyan)   !important; }
+.comp-table thead th.win-mru { color: var(--accent-violet) !important; }
 .comp-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
 .comp-table tbody tr:hover td { background: rgba(45,224,208,0.05); }
+.comp-table .cmp-metric {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.compare-toggle-header {
+  font-size:      10px;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color:          var(--text-muted);
+  margin:         20px 0 10px;
+  padding:        10px 0 10px;
+  border-top:     1px dashed var(--border);
+  display:        flex;
+  align-items:    center;
+  gap:            10px;
+}
+.compare-toggle-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
 .winner-cell {
-  background:  rgba(61,220,132,0.08);
+  background:  rgba(61,220,132,0.08) !important;
   font-weight: 700;
+  color: var(--accent-green);
 }
 .winner-badge {
   font-weight: 700;
@@ -818,7 +853,7 @@ input[type="range"] {
 .win-lru { color: var(--accent-cyan);   }
 .win-mru { color: var(--accent-violet); }
 
-/* Compare Panel — Single-Policy Toggle View
+/* Compare Panel - Single-Policy Toggle View
    Added for the LRU/MRU toggle. */
    
 #compare-grid {
@@ -858,7 +893,7 @@ input[type="range"] {
   margin:         18px 0 6px;
 }
 /* Mirrors the #stat-hits / #stat-misses / #stat-hit-rate / #stat-miss-rate
-   ID rules above — same colors, applied via class since these stat cards
+   ID rules above - same colors, applied via class since these stat cards
    live inside #compare-table and can't reuse those unique IDs. */
 .cmp-stat-hits .stat-value,
 .cmp-stat-hit-rate .stat-value  { color: var(--accent-green); }
@@ -900,8 +935,7 @@ input[type="range"] {
 }
 
 /* Responsive */
-
-/* Medium laptop / narrower browser windows — trim the sidebar before stacking */
+/* Medium laptop / narrower browser windows - trim the sidebar before stacking */
 @media (max-width: 1200px) {
   .main-layout { grid-template-columns: 260px 1fr; }
 }

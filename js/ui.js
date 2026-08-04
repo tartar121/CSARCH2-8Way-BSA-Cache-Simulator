@@ -1,22 +1,18 @@
 /**
- * ui.js for Member 2
- * All DOM interaction, rendering, and animation logic.
- * This file connects the HTML (Member 1) to the engine (Member 3)
- * and comparison module (Member 4).
+ * ui.js
+ * Handles all DOM interaction, rendering, and animation for the simulator.
  *
- * YOUR JOB:
- *   1. Fill in every function marked with TODO.
- *   2. Do NOT put cache logic here -> call CacheEngine methods instead.
- *   3. Do NOT add or rename HTML element IDs -> use the ones in index.html.
- *   4. If you need a new HTML element, ask Member 1 to add it and update
- *      the SHARED ID LIST at the bottom of index.html.
+ * This file is the "bridge" between the HTML structure (index.html),
+ * the cache logic (cache-engine.js), and the comparison module (comparison.js).
+ * It does NOT perform any cache calculations - it only reads results from
+ * CacheEngine and displays them on screen.
  *
- * READING ORDER:
- *   Start with AppState and DOM, then wireEvents(), then the rendering
- *   functions (renderCacheState, appendLogEntry, updateStats).
- *   The animation functions (startAuto, stopAuto) come last.
+ * Main responsibilities:
+ *  - Reading user input (config dropdowns, sequence textarea, buttons)
+ *  - Running and controlling the simulation (step, auto-play, pause, reset)
+ *  - Rendering the cache grid, trace log, statistics, and comparison panel
+ *  - Managing application state through the AppState object
  */
-
 
 //  App State 
 // This object is the single source of truth for what the app is doing.
@@ -39,16 +35,37 @@ const AppState = {
 // Always use DOM.xxx rather than calling document.getElementById every time.
 const DOM = {};
 
+// Audio
+const SFX = {
+  step:     null,
+  complete: null,
+
+  /**
+   * Initializes audio references after the DOM is loaded.
+   * Called once in the DOMContentLoaded listener.
+   */
+  init() {
+    this.step     = document.getElementById('sfx-step');
+    this.complete = document.getElementById('sfx-complete');
+  },
+
+  /**
+   * Plays the given sound from the beginning.
+   * Silently fails if the file isn't loaded or the browser blocks autoplay.
+   * @param {'step'|'complete'} name
+   */
+  play(name) {
+    const audio = this[name];
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.play().catch(() => {}); // ignore autoplay block errors
+  },
+};
+
 /**
- * // TODO: implement this
- * Look up every HTML element that this file needs and store it in DOM.
- * Use the IDs from the SHARED ID LIST at the bottom of index.html.
- *
- * Example:
- *   DOM.numBlocks = document.getElementById('num-blocks');
- *
- * Do this for every single element ui.js reads or writes.
- * Call this function once inside the DOMContentLoaded listener at the bottom.
+ * Looks up and stores references to all required DOM elements.
+ * Called once on page load. All other functions access elements
+ * through the DOM object rather than querying the document each time.
  */
 function cacheDOMRefs() {
   // Config inputs
@@ -121,12 +138,9 @@ function getConfig() {
 }
 
 /**
- * // TODO: implement this
- * Update the #config-info banner to summarise the current settings.
- * Called on page load and whenever a config dropdown changes.
- *
- * Example output (innerHTML):
- *   "16 blocks | 8-way | 2 sets | Block size: 4 words | Policy: LRU | Read: non-load-through"
+ * Reads the current configuration dropdowns and updates the
+ * #config-info banner with a formatted summary of the active settings.
+ * Called on page load and whenever a dropdown value changes.
  */
 function updateConfigInfo() {
   const cfg     = getConfig();
@@ -141,10 +155,9 @@ function updateConfigInfo() {
 
 // Sequence Helpers
 /**
- * // TODO: implement this
- * Store the given sequence in AppState, fill the textarea,
- * and update the #seq-display preview label.
- * @param {number[]} seq
+ * Stores the given sequence in AppState, fills the sequence textarea,
+ * and updates the preview label with the access count and a short preview.
+ * @param {number[]} seq - array of block addresses to load
  */
 function setSequence(seq) {
   AppState.sequence = seq;
@@ -162,17 +175,10 @@ function setSequence(seq) {
 
 // Engine Bootstrap
 /**
- * // TODO: implement this
- * Called when the user clicks Run.
- *   1. Stop any running auto-play.
- *   2. Read the config with getConfig().
- *   3. Create a new CacheEngine and wrap in try/catch and alert on error.
- *   4. If AppState.sequence is empty, alert and return false.
- *   5. Call engine.simulate(AppState.sequence) to run the full simulation
- *      and store the result in AppState.log.
- *   6. Reset AppState.stepIndex to 0.
- *   7. Clear the log panel, reset the cache grid to empty, reset stats.
- *   8. Return true on success.
+ * Initializes and runs a new simulation using the current config and sequence.
+ * Stops any active auto-play, creates a fresh CacheEngine, runs the full
+ * sequence, and resets the display (cache grid, log, stats, progress bar).
+ * Returns true on success, false if the sequence is empty or config is invalid.
  *
  * @returns {boolean}
  */
@@ -210,19 +216,11 @@ function initSimulation() {
 
 // Step Execution
 /**
- * // TODO: implement this
- * Advance the simulation display by exactly one step.
- *   1. If stepIndex >= log.length, return false (we're done).
- *   2. Get the log entry at AppState.log[AppState.stepIndex].
- *   3. Increment AppState.stepIndex.
- *   4. Call appendLogEntry(entry).
- *   5. Call renderCacheState(entry) to update the grid.
- *   6. Call updateStatsFromLog() to refresh the stats panel.
- *   7. Call updateProgress(stepIndex, log.length).
- *   8. Update DOM.currentAccess with a summary string.
- *   9. Return true if there are more steps, false if this was the last.
+ * Advances the simulation display by exactly one step.
+ * Reads the next log entry, renders the cache grid update, appends a log
+ * entry, and refreshes the stats panel and progress bar.
  *
- * @returns {boolean} true if more steps remain
+ * @returns {boolean} true if more steps remain, false if this was the last
  */
 function stepForward() {
   if (!AppState.log || AppState.stepIndex >= AppState.log.length) {
@@ -231,6 +229,7 @@ function stepForward() {
 
   const entry = AppState.log[AppState.stepIndex];
   AppState.stepIndex++;
+  SFX.play('step');
 
   appendLogEntry(entry);
   renderCacheState(entry);
@@ -244,14 +243,9 @@ function stepForward() {
 }
 
 /**
- * // TODO: implement this
- * Jump directly to the final state.
- *   1. If log is empty, call initSimulation() first.
- *   2. Set stepIndex to log.length.
- *   3. Clear the log and re-append ALL entries at once.
- *   4. Call renderFinalCacheGrid() to show the end state.
- *   5. Call updateStatsFromLog() with the complete log.
- *   6. Update progress to N/N.
+ * Jumps directly to the end of the simulation without stepping through.
+ * Renders the full trace log, final cache grid state, and complete statistics
+ * all at once. Initializes the simulation first if it hasn't been run yet.
  */
 function showFinalSnapshot() {
   if (!AppState.log || AppState.log.length === 0) {
@@ -265,6 +259,7 @@ function showFinalSnapshot() {
 
   renderFinalCacheGrid();
   updateStatsFromLog();
+  SFX.play('complete');
   updateProgress(AppState.log.length, AppState.log.length);
 
   const last = AppState.log[AppState.log.length - 1];
@@ -276,11 +271,9 @@ function showFinalSnapshot() {
 
 // Auto-Play
 /**
- * // TODO: implement this
- * Start auto-play using setInterval.
- * On each tick, call stepForward(). If it returns false, call stopAuto().
- * Store the interval handle in AppState.animTimer.
- * Update button disabled states (Pause enabled, Auto disabled).
+ * Starts the auto-play animation using setInterval.
+ * Steps forward automatically at the interval defined by AppState.animSpeed.
+ * Stops and unlocks the Compare button when the last step is reached.
  */
 function startAuto() {
   if (AppState.animTimer) return; // already running
@@ -295,16 +288,15 @@ function startAuto() {
       stopAuto();
       DOM.btnStep.disabled = true;
       DOM.btnAuto.disabled = true;
-      DOM.btnCompare.disabled = false; // Auto-play finished — unlock Compare Policies
+      DOM.btnCompare.disabled = false; // Auto-play finished (unlock Compare Policies)
+      SFX.play('complete');
     }
   }, AppState.animSpeed);
 }
 
 /**
- * // TODO: implement this
- * Stop auto-play by clearing the interval.
- * Set AppState.animTimer to null.
- * Update button disabled states (Pause disabled, Auto enabled).
+ * Stops the auto-play animation by clearing the active interval.
+ * Re-enables the Step button if there are still steps remaining.
  */
 function stopAuto() {
   if (AppState.animTimer) {
@@ -322,15 +314,11 @@ function stopAuto() {
 
 // Cache Grid Rendering
 /**
- * // TODO: implement this
- * Render an empty cache grid skeleton (all lines invalid).
- * Clear #cache-grid and build numSets .cache-set cards,
- * each with 8 .cache-line rows showing valid=0 and dashes.
+ * Renders an empty cache grid skeleton with all ways set to invalid.
+ * Builds one .cache-set card per set, each containing 8 .cache-line rows
+ * with dashes for all fields. Called at the start of each new simulation.
  *
- * CSS classes to use on each line's cells:
- *   .cl-way  .cl-valid  .cl-tag  .cl-block  .cl-order
- *
- * @param {number} numSets
+ * @param {number} numSets - number of set cards to render
  */
 function renderEmptyCacheGrid(numSets) {
   DOM.cacheGrid.innerHTML = '';
@@ -344,13 +332,13 @@ function renderEmptyCacheGrid(numSets) {
 }
 
 /**
- * // TODO: implement this
- * Build and return a single .cache-line DOM element.
- * Apply .cache-hit, .cache-miss, or .cache-evicted based on highlight param.
+ * Builds and returns a single cache line DOM element.
+ * Applies the appropriate highlight class based on whether this line
+ * was a hit, miss, eviction, or untouched in the current step.
  *
- * @param {number} setIdx
- * @param {number} wayIdx
- * @param {Object} lineData  - { valid, tag, blockNum, order }
+ * @param {number} setIdx   - index of the parent set (used for element ID)
+ * @param {number} wayIdx   - way number within the set (0–7)
+ * @param {Object} lineData - { valid, tag, blockNum, order }
  * @param {string} highlight - 'hit' | 'miss' | 'evicted' | 'none'
  * @returns {HTMLElement}
  */
@@ -392,13 +380,14 @@ function buildCacheLineEl(setIdx, wayIdx, lineData, highlight) {
 }
 
 /**
- * Build one .cache-set card (header + 8 .cache-line rows) for a given set.
- * Shared by the main grid, the final-snapshot grid, and the compare panel.
+ * Builds and returns one cache set card containing a header and 8 cache line rows.
+ * Shared by the main cache grid, the final snapshot view, and the compare panel
+ * to avoid duplicating the set card layout in multiple places.
  *
- * @param {number} setIdx
- * @param {Object[]} setLines     - 8 line objects { valid, tag, blockNum, order }
- * @param {Object} highlightMap   - { [wayIdx]: 'hit'|'miss'|'evicted' }
- * @param {string} idPrefix       - DOM id prefix so multiple grids can coexist
+ * @param {number} setIdx        - set number shown in the card header (e.g. "Set 0")
+ * @param {Object[]} setLines    - array of 8 line objects { valid, tag, blockNum, order }
+ * @param {Object} highlightMap  - maps way index to highlight type: { [wayIdx]: 'hit'|'miss'|'evicted' }
+ * @param {string} idPrefix      - prefix for the card's DOM id (e.g. 'cache-set' or 'cmp-set')
  * @returns {HTMLElement}
  */
 function buildSetCardEl(setIdx, setLines, highlightMap, idPrefix) {
@@ -420,17 +409,11 @@ function buildSetCardEl(setIdx, setLines, highlightMap, idPrefix) {
 }
 
 /**
- * // TODO: implement this
- * After a single step, update only the affected set in the cache grid.
- * Use entry.snapshot to get the current line states for that set.
- * Apply highlights:
- *   - entry.hitLine       → 'hit'
- *   - entry.loadedLine    → 'miss'
- *   - entry.evicted.line  → 'evicted' (if entry.evicted exists)
+ * Updates only the affected set card in the cache grid after a single step.
+ * Reads the line states from entry.snapshot and applies hit/miss/eviction
+ * highlights to the appropriate way. Scrolls the set into view smoothly.
  *
- * Optionally scroll the affected set into view.
- *
- * @param {Object} entry - log entry from access()
+ * @param {Object} entry - log entry returned by CacheEngine.access()
  */
 function renderCacheState(entry) {
   const highlightMap = {};
@@ -459,10 +442,9 @@ function renderCacheState(entry) {
 }
 
 /**
- * // TODO: implement this
- * Render the final state of the entire cache.
- * Call engine.getCacheState() to get all sets, then build the grid.
- * No highlights needed (this is a static final view).
+ * Renders the complete final cache state across all sets.
+ * Rebuilds the entire cache grid from getCacheState() with no highlights.
+ * Used by the Final Snapshot button and showFinalSnapshot().
  */
 function renderFinalCacheGrid() {
   if (!AppState.engine) return;
@@ -478,23 +460,16 @@ function renderFinalCacheGrid() {
 
 // Stats Rendering
 /**
- * // TODO: implement this
- * Compute and display stats based on how many steps have been shown so far.
- * Slice AppState.log to AppState.stepIndex entries, compute counts,
- * then call updateStats() with the results.
- *
- * Hint: You need the read policy from AppState.engine.readPolicy to pick
- * the right AMAT formula:
- *   non-load-through: AMAT = 1 + (missRate × 10)
- *   load-through:     AMAT = (hitRate × 1) + (missRate × 10)
+ * Recomputes and displays statistics based on the steps shown so far.
+ * Slices the log up to the current stepIndex, counts hits and misses,
+ * and applies the correct AMAT formula based on the active read policy.
+ * Shows dashes for all stats if no steps have been taken yet.
  */
 function updateStatsFromLog() {
   const slice = AppState.log.slice(0, AppState.stepIndex);
   const total  = slice.length;
  
-  // Update the stats by reseting the values to 0 when the simulation is restarted/
-  // new implementation is placed to avoid confusion with the current implementation
-
+  // Reset stats display to blank when no steps have been taken yet
   if (total === 0) {
     updateStats({
       totalAccesses: 0,
@@ -536,9 +511,7 @@ function updateStatsFromLog() {
 }
 
 /**
- * Write the given stats values into the stats panel DOM elements.
- * You should not need to change this and just make sure updateStatsFromLog()
- * calls it with the right values.
+ * Writes the given statistics values into the stats panel DOM elements.
  *
  * @param {Object} s
  * @param {number|string} s.totalAccesses
@@ -580,31 +553,12 @@ function clearLog() {
 }
 
 /**
- * // TODO: implement this
- * Build and append one log entry div to #log-container.
+ * Builds and returns a log entry DOM element for the given access.
+ * Shows the access number, HIT/MISS badge, block/set/tag details, policy,
+ * and an eviction detail line if a block was replaced during this access.
+ * Used by both the main trace log and the comparison panel's full log.
  *
- * Each entry must show:
- *   - Access number
- *   - HIT or MISS badge
- *   - Block address, set index, tag, policy, read policy
- *   - If entry.evicted is not null: show which block was evicted and why
- *
- * CSS classes to use (defined in style.css by Member 1):
- *   .log-entry
- *   .log-hit or .log-miss   (based on entry.result)
- *   .log-header, .log-num, .log-badge
- *   .log-badge-hit or .log-badge-miss
- *   .log-body
- *   .log-evict              (for the eviction detail line)
- *
- * Auto-scroll the log to the bottom after appending.
- *
- * @param {Object} entry - log entry from access()
- */
-/**
- * Build one .log-entry element for a given log entry.
- * Shared by the main log panel and the compare panel's full log.
- * @param {Object} entry - log entry from access()
+ * @param {Object} entry - log entry returned by CacheEngine.access()
  * @returns {HTMLElement}
  */
 function buildLogEntryEl(entry) {
@@ -668,7 +622,7 @@ function setActiveSeqButton(activeBtn) {
 }
 
 /**
- * Clear the compare panel back to its initial, hidden state — used by Reset
+ * Clear the compare panel back to its initial, hidden state - used by Reset
  * so a stale LRU/MRU comparison from a previous run doesn't linger on screen.
  */
 function hideComparePanel() {
@@ -684,7 +638,7 @@ function hideComparePanel() {
 /**
  * Render the Compare panel for whichever policy is currently toggled
  * (AppState.compareView: 'LRU' or 'MRU'). Both engines already ran on
- * the same sequence via runComparison() — this only decides which one's
+ * the same sequence via runComparison() - this only decides which one's
  * full results (stats + final cache grid + full log) get shown.
  * LRU and MRU are never displayed side by side.
  */
@@ -696,7 +650,7 @@ function renderComparePanel() {
   const view = AppState.compareView; // 'LRU' or 'MRU'
   const data = view === 'LRU' ? AppState.compareData.lru : AppState.compareData.mru;
 
-  // Toggle button active state — reuses the same .is-active pattern as
+  // Toggle button active state - reuses the same .is-active pattern as
   // the Sequential/Mid-Repeat/Random segmented control.
   DOM.cmpBtnLru.classList.toggle('is-active', view === 'LRU');
   DOM.cmpBtnMru.classList.toggle('is-active', view === 'MRU');
@@ -710,8 +664,39 @@ function renderComparePanel() {
     : `Currently viewing ${viewedSpan}. Faster overall (lower AMAT): <span class="win-${amatRow.winner.toLowerCase()}">${amatRow.winner}</span>.`;
 
   // Rebuild the panel body for the selected policy only.
+  // followed by the detailed view for the selected policy.
+  const allRows = buildComparisonTable(AppState.compareData);
+  const tableRowsHTML = allRows
+    .filter(r => r.metric !== 'Total Accesses') // total is always a tie, not useful here
+    .map(r => {
+      const lruWins = r.winner === 'LRU';
+      const mruWins = r.winner === 'MRU';
+      return `
+        <tr>
+          <td class="cmp-metric">${r.metric}</td>
+          <td class="${lruWins ? 'winner-cell' : ''}">${r.lru}${lruWins ? ' 🏆' : ''}</td>
+          <td class="${mruWins ? 'winner-cell' : ''}">${r.mru}${mruWins ? ' 🏆' : ''}</td>
+        </tr>`;
+    }).join('');
+
+  // Rebuild the panel body: side-by-side table first then the toggle detail view
   DOM.compareTable.innerHTML = `
     <div class="compare-summary">${summaryText}</div>
+
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th class="win-lru">LRU</th>
+          <th class="win-mru">MRU</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHTML}
+      </tbody>
+    </table>
+
+    <div class="compare-toggle-header">View Detailed Results:</div>
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-label">Total Accesses</div><div class="stat-value">${data.stats.totalAccesses}</div></div>
       <div class="stat-card cmp-stat-hits"><div class="stat-label">Cache Hits</div><div class="stat-value">${data.stats.hits}</div></div>
@@ -747,23 +732,10 @@ function renderComparePanel() {
 
 // Event Wiring
 /**
- * // TODO: implement this
- * Attach all event listeners. Called once on DOMContentLoaded.
- *
- * Events to wire:
- *   Config dropdowns → updateConfigInfo()
- *   #btn-seq   → setSequence(generateSequential(n))
- *   #btn-mid   → setSequence(generateMidRepeat(n))
- *   #btn-rand  → setSequence(generateRandom())
- *   #btn-custom→ parse textarea, call setSequence() or alert if empty
- *   #btn-run   → initSimulation(), enable step/auto/final/reset buttons
- *   #btn-step  → stepForward(), disable if done
- *   #btn-auto  → initSimulation() if needed, then startAuto()
- *   #btn-pause → stopAuto()
- *   #btn-final → showFinalSnapshot()
- *   #btn-reset → stopAuto(), clear everything, disable controls
- *   #speed-slider → update AppState.animSpeed, restart auto if running
- *   #btn-compare  → run runComparison(), then renderComparisonTable()
+ * Attaches all event listeners to the UI controls.
+ * Called once on DOMContentLoaded. Wires config dropdowns, sequence buttons,
+ * simulation controls (Run/Step/Auto/Pause/Final/Reset), speed slider,
+ * Compare button, and the LRU/MRU toggle buttons in the compare panel.
  */
 function wireEvents() {
   // Config change
@@ -796,7 +768,7 @@ function wireEvents() {
       return;
     }
     setSequence(parsed);
-    setActiveSeqButton(null); // custom sequence — none of the three presets apply
+    setActiveSeqButton(null); // custom sequence - none of the three presets apply
   });
 
   // Simulation controls
@@ -931,7 +903,7 @@ function wireEvents() {
     renderComparePanel();
   });
 
-  // Compare panel toggle buttons — switch which single policy is displayed
+  // Compare panel toggle buttons - switch which single policy is displayed
   DOM.cmpBtnLru.addEventListener('click', () => {
     if (!AppState.compareData) return;
     AppState.compareView = 'LRU';
@@ -949,6 +921,7 @@ function wireEvents() {
 // Init on page load
 document.addEventListener('DOMContentLoaded', () => {
   cacheDOMRefs();
+  SFX.init();
   updateConfigInfo();
   wireEvents();
 
