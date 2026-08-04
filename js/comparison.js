@@ -65,7 +65,7 @@ function runComparison(sequence, baseConfig) {
  *
  * Metrics included (in order):
  *   Total Accesses, Cache Hits, Cache Misses,
- *   Hit Rate, Miss Rate, AMAT, Total Access Time
+ *   Hit Rate, Miss Rate, AMAT, Total Memory Access Time
  *
  * @param {{ lru: Object, mru: Object }} comparison - output of runComparison()
  * @returns {Object[]} array of { metric, lru, mru, winner } row objects
@@ -139,7 +139,7 @@ function buildComparisonTable(comparison) {
   }
   rows.push({ metric: 'AMAT', lru: lru.amat, mru: mru.amat, winner: amatWinner });
 
-  // 7. Total Access Time - lower is better
+  // 7. Total Memory Access Time - lower is better
   let timeWinner;
   if (lru.totalTimeRaw === mru.totalTimeRaw) {
     timeWinner = 'tie';
@@ -148,7 +148,7 @@ function buildComparisonTable(comparison) {
   } else {
     timeWinner = 'MRU';
   }
-  rows.push({ metric: 'Total Access Time', lru: lru.totalTime, mru: mru.totalTime, winner: timeWinner });
+  rows.push({ metric: 'Total Memory Access Time', lru: lru.totalTime, mru: mru.totalTime, winner: timeWinner });
 
   return rows;
 }

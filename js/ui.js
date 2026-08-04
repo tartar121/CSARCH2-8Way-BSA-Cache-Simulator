@@ -704,7 +704,7 @@ function renderComparePanel() {
       <div class="stat-card cmp-stat-hit-rate"><div class="stat-label">Hit Rate</div><div class="stat-value">${data.stats.hitRate}</div></div>
       <div class="stat-card cmp-stat-miss-rate"><div class="stat-label">Miss Rate</div><div class="stat-value">${data.stats.missRate}</div></div>
       <div class="stat-card"><div class="stat-label">AMAT</div><div class="stat-value">${data.stats.amat}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Access Time</div><div class="stat-value">${data.stats.totalTime}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Memory Access Time</div><div class="stat-value">${data.stats.totalTime}</div></div>
     </div>
     <div class="compare-subheader">Final Cache State — ${data.policy}</div>
     <div id="compare-grid"></div>

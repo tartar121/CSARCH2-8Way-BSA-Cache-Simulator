@@ -281,7 +281,7 @@ class CacheEngine {
       amatRaw = CACHE_ACCESS_TIME + (missRateRaw * MEMORY_ACCESS_TIME);
     }
 
-    // Total Access Time = Total Accesses × AMAT
+    // Total Memory Access Time = Total Accesses × AMAT
     const totalTimeRaw = total * amatRaw;
 
     return {
