@@ -6,21 +6,20 @@
   <title>Machine 9: 8-Way Set Associative Cache Simulator</title>
 
   <!-- index.html
-    Job: Build and maintain the full HTML structure.
-         Add/style panels here. Do NOT write any JS logic here pls pls pls
+  The full HTML structure of the Machine 9 Cache Simulator.
+  All styling is handled by css/style.css and all logic by the JS files.
 
-    IMPORTANT: Do not rename or remove any id="..." attributes
-    below so Member 2 (ui.js) depends on every single one.
-    If you add a new element that JS needs to touch,
-    add it to the SHARED ID LIST at the bottom of this file.
+  Important: Do not rename or remove any id="..." attributes as
+  ui.js depends on them to read inputs and update the display.
+  The full ID reference list is at the bottom of this file.
   -->
 
-  <!-- Google Fonts — feel free to change the font pair -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
 
-  <!-- this is the style sheet -->
+  <!-- style sheet -->
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -36,7 +35,7 @@
   <!-- MAIN LAYOUT  (sidebar + main content) -->
   <div class="main-layout">
 
-    <!--  SIDEBAR  (left column) -->
+    <!-- SIDEBAR  (left column) -->
     <aside class="sidebar">
 
       <!-- PANEL: Configuration -->
@@ -66,7 +65,7 @@
           <div class="form-row">
             <label for="block-size">Block Size (words)</label>
             <!-- NOTE:
-              Keep id="block-size". Values must be powers of 2 and ≥ 2.
+              Keep id="block-size" and values must be powers of 2 and ≥ 2.
             -->
             <select id="block-size">
               <option value="2">2 words</option>
@@ -95,11 +94,8 @@
             </select>
           </div>
 
-          <!--
-            Config summary banner (updated automatically by ui.js)
-            1st Member: Style this however you like.
-            2nd Member: Writes into this element's innerHTML.
-          -->
+          <!-- Summary banner showing the current configuration.
+               Updated automatically by ui.js on page load and on every dropdown change. -->
           <div id="config-info" class="config-info">
             <!-- ui.js fills this in automatically on page load and on change -->
           </div>
@@ -113,8 +109,8 @@
         <div class="panel-header">Access Sequence</div>
         <div class="panel-body">
 
-          <!-- Preset sequence buttons -->
-          <!-- 4th Member wires the logic; 1st Member just lays out these buttons -->
+          <!-- Preset buttons for the three required test sequences.
+               Logic is handled by ui.js and sequences.js -->
           <div class="seq-type-btns">
             <button id="btn-seq">Sequential</button>
             <button id="btn-mid">Mid-Repeat</button>
@@ -149,12 +145,26 @@
       <section class="panel" id="panel-fixed">
         <div class="panel-header"> Fixed Parameters</div>
         <div class="panel-body">
-          <!-- 1st Member: Style this as a small info table or list -->
+          <!-- Read-only display of fixed simulation parameters. -->
           <ul class="fixed-params">
             <li><span>Ways per set</span><strong>8</strong></li>
             <li><span>Main memory</span><strong>1024 blocks</strong></li>
             <li><span>Cache access time</span><strong>1 ns</strong></li>
             <li><span>Memory access time</span><strong>10 ns</strong></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- PANEL: Group Members -->
+      <section class="panel" id="panel-members">
+        <div class="panel-header">Group Members</div>
+        <div class="panel-body">
+          <ul class="fixed-params">
+            <li><span>Dabuit, Daniel Jedrick C.</span></li>
+            <li><span>Go, John William D.</span></li>
+            <li><span>Liwanag, Ram Miguel C.</span></li>
+            <li><span>Lobo, Shirley Marie A.</span></li>
+            <li><span>Uy, Tara Ysabel P.</span></li>
           </ul>
         </div>
       </section>
@@ -171,10 +181,7 @@
         <div class="panel-body">
 
           <div class="sim-controls">
-            <!--
-              IMPORTANT FOR 1st Member:
-              2nd Member attaches click listeners to every one of them.
-            -->
+            <!-- Simulation control buttons. All click handlers are attached by ui.js -->
             <button id="btn-run" class="btn-primary">▶ Run</button>
             <button id="btn-step" class="btn-secondary">⏭ Step</button>
             <button id="btn-auto" class="btn-success">⏩ Auto-Play</button>
@@ -192,15 +199,13 @@
             </div>
           </div>
 
-          <!-- Progress bar -->
-          <!-- 1st Member: Style the .progress-wrap and .progress-bar however you like -->
+          <!-- Progress bar - width is updated by ui.js as steps are completed. -->
           <div class="progress-wrap">
             <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
           </div>
           <!-- ui.js writes "current / total" here -->
           <div class="progress-meta">
             <span id="progress-text">0 / 0</span>
-            <!-- ui.js writes the latest access result here -->
             <span id="current-access">–</span>
           </div>
 
@@ -212,7 +217,7 @@
       <section class="panel" id="panel-cache">
         <div class="panel-header">
           Cache Memory State
-          <!-- Legend for Member 1: style the dots -->
+          <!-- Color legend for cache line highlights -->
           <div class="legend">
             <span class="legend-item"><span class="dot dot-hit"></span>Hit</span>
             <span class="legend-item"><span class="dot dot-miss"></span>Miss</span>
@@ -220,10 +225,8 @@
           </div>
         </div>
 
-        <!-- Column headers for each cache line row.
-          These labels should match what ui.js renders inside each .cache-line div.
-          Order: Way | Valid | Tag | Block | Order
-        -->
+        <!-- Column headers matching the order of cells in each .cache-line row:
+             Way | Valid | Tag | Block # | Order -->
         <div class="cache-col-headers">
           <span>Way</span>
           <span>Valid</span>
@@ -232,11 +235,8 @@
           <span>Order</span>
         </div>
 
-        <!-- THIS IS WHERE THE CACHE GRID LIVES.
-          ui.js dynamically builds and updates the contents of this div.
-          1st Member: style #cache-grid and its children (.cache-set, .cache-line, etc.)
-          but do NOT put static content here — it gets wiped on every Run/Reset.
-        -->
+        <!-- Cache grid - contents are built and updated dynamically by ui.js
+             Do not add static content here; it is wiped on every Run and Reset. -->
         <div id="cache-grid">
           <p class="grid-placeholder">Run a simulation to see the cache state.</p>
         </div>
@@ -249,10 +249,8 @@
         <div class="panel-header">Statistics</div>
         <div class="panel-body">
 
-          <!-- 1st Member: Lay these out in a grid of cards.
-            2nd Member: Writes into each .stat-value span.
-            Do NOT rename the IDs.
-          -->
+          <!-- Statistics cards - values are written by ui.js after each step.
+               Do not rename the stat value IDs. -->
           <div class="stats-grid">
 
             <div class="stat-card">
@@ -298,42 +296,32 @@
       <!-- PANEL: Text Log -->
       <section class="panel" id="panel-log">
         <div class="panel-header">Access Log</div>
-        <!-- ui.js appends one .log-entry div here per access.
-          1st Member: style the log container and .log-entry children.
-          Keep the id="log-container".
-        -->
+        <!-- Trace log - ui.js appends one .log-entry per block access.
+             Keep id="log-container". -->
         <div id="log-container">
           <!-- Entries injected by ui.js -->
         </div>
       </section><!-- /panel-log -->
 
 
-      <!-- PANEL: Policy Comparison (hidden until Compare button is clicked) -->
-      <!-- 1st Member: This panel starts hidden (display:none via CSS).
-        ui.js sets it to display:block when Compare is clicked.
-        Style the table inside however you like.
-      -->
+      <!-- Policy comparison panel - hidden by default via CSS.
+          ui.js shows this when Compare Policies is clicked. -->
       <section class="panel panel--compare" id="compare-panel">
         <div class="panel-header">
           ⇄ Policy Comparison — LRU vs. MRU
           <span class="panel-header-tag panel-header-tag--violet">single-policy view</span>
         </div>
         <div class="panel-body">
-          <!-- Toggle: switches which single policy's full results (stats,
-            cache grid, log) are shown below. Both engines already ran on
-            the same sequence; this only changes which one is displayed.
-            Reuses the existing .seq-type-btns segmented-control styling
-            and .is-active state — no new button CSS needed.
-          -->
+          <!-- Toggle buttons to switch between viewing LRU and MRU results.
+               The active policy gets the .is-active class via ui.js -->
           <div class="seq-type-btns">
             <button id="cmp-btn-lru" type="button">LRU</button>
             <button id="cmp-btn-mru" type="button">MRU</button>
           </div>
 
-          <!-- 4th Member builds the comparison data (comparison.js).
-            ui.js injects the summary + stats + grid + log HTML for
-            whichever policy is currently toggled into this div.
-            Keep id="compare-table".
+          <!-- Comparison content injected by ui.js - shows the side-by-side
+               summary table and the selected policy's stats, cache state, and log.
+               Keep id="compare-table" -->
           -->
           <div id="compare-table">
             <!-- Injected by ui.js -->
@@ -344,27 +332,30 @@
     </main><!-- /main-content -->
   </div><!-- /main-layout -->
 
+  <!-- Audio elements for simulation sound effects -->
+  <audio id="sfx-step" src="sfx/step.mp3" preload="auto"></audio>
+  <audio id="sfx-complete" src="sfx/complete.mp3" preload="auto"></audio>
 
   <!-- SCRIPTS
-       Load order matters — engine must load before comparison,
+       Load order matters - engine must load before comparison,
        both must load before ui. -->
-  <script src="js/cache-engine.js"></script>   <!-- Member 3 -->
-  <script src="js/sequences.js"></script>       <!-- Member 4 -->
-  <script src="js/comparison.js"></script>      <!-- Member 4 -->
-  <script src="js/ui.js"></script>              <!-- Member 2 -->
+  <script src="js/cache-engine.js"></script> <!-- core cache logic -->
+  <script src="js/sequences.js"></script> <!-- test sequence generators -->
+  <script src="js/comparison.js"></script> <!-- LRU vs MRU comparison -->
+  <script src="js/ui.js"></script> <!-- DOM rendering and controls -->
 
 
-  <!-- SHARED ID LIST — READ THIS IF YOU TOUCH index.html OR ui.js
+  <!-- SHARED ID LIST - READ THIS IF YOU TOUCH index.html OR ui.js
   Keep this comment block updated whenever IDs are added/changed.
 
-  CONFIG INPUTS (Member 1 owns HTML, Member 2 reads values)
+  CONFIG INPUTS (defined in index.html, read by ui.js)
     #num-blocks       -> <select>  cache block count
     #block-size       -> <select>  block size in words
     #policy           -> <select>  'LRU' or 'MRU'
     #read-policy      -> <select>  'non-load-through' or 'load-through'
     #config-info      -> <div>     ui.js writes config summary here
 
-  SEQUENCE (Member 1 owns HTML, Member 2+4 wire logic)
+  SEQUENCE (defined in index.html, wired by ui.js and sequences.js)
     #btn-seq          -> <button>  load Sequential sequence
     #btn-mid          -> <button>  load Mid-Repeat sequence
     #btn-rand         -> <button>  load Random sequence
@@ -372,7 +363,7 @@
     #seq-input        -> <textarea> raw custom sequence text
     #seq-display      -> <p>       ui.js writes "N accesses: …" here
 
-  CONTROLS (Member 1 owns HTML, Member 2 wires click handlers)
+  CONTROLS (defined in index.html, wired by ui.js)
     #btn-run          -> <button>  initialise simulation
     #btn-step         -> <button>  advance one step
     #btn-auto         -> <button>  start auto-play
@@ -438,9 +429,9 @@
                                      here (summary line + stat cards + final
                                      cache grid + full log). Only the policy
                                      selected via the toggle is shown at a
-                                     time — LRU and MRU are never rendered
+                                     time - LRU and MRU are never rendered
                                      side by side.
-    CSS classes used inside #compare-table (see style.css "Compare Panel —
+    CSS classes used inside #compare-table (see style.css "Compare Panel -
     Single-Policy Toggle View" section for the handful that are new;
     everything else reuses existing .stats-grid/.stat-card/.cache-set/
     .log-entry styling):

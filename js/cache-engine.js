@@ -1,38 +1,45 @@
 /**
  * cache-engine.js
- * Core cache simulation logic.
- *     NO DOM access in this file — no document.getElementById, no alert.
- *     This file is pure logic only.
- *     Member 2 (ui.js) calls the methods here and handles all display.
+ * Core cache simulation logic for an 8-Way Set Associative cache (Machine 9).
  *
- * YOUR JOB:
- *   1. Fill in the CacheEngine class methods marked with TODO.
- *   2. Make sure getStats() returns an object with EXACTLY the fields
- *      listed in the DATA CONTRACT below — Member 2 depends on them.
- *   3. Make sure access() returns a log entry with EXACTLY the fields
- *      listed in the LOG ENTRY CONTRACT below.
- *   4. Test your logic in the browser console before the UI is ready:
- *        const e = new CacheEngine({numCacheBlocks:16, blockSize:4, policy:'LRU', readPolicy:'non-load-through'});
- *        e.simulate([0,1,0]);
- *        console.log(e.getStats());
+ * This file is pure logic - it has no access to the DOM and does not
+ * interact with the UI in any way. All methods return plain data objects
+ * that ui.js reads and renders.
+ *
+ * Cache organization:
+ *  - 8 ways per set (fixed for Machine 9)
+ *  - Number of sets = Total cache blocks / 8
+ *  - Address mapping:
+ *      Set Index = Block Number mod Number of Sets
+ *      Tag = floor(Block Number / Number of Sets)
+ *
+ * Supports two replacement policies:
+ *  - LRU (Least Recently Used): evicts the line accessed longest ago
+ *  - MRU (Most Recently Used): evicts the line accessed most recently
+ *
+ * Supports two read policies:
+ *  - Non-load-through: AMAT = Tc + (Miss Rate × Tm)
+ *  - Load-through: AMAT = (Hit Rate × Tc) + (Miss Rate × Tm)
  */
 
 // Constants
-const MAIN_MEMORY_BLOCKS = 1024;  // fixed per project spec[cite: 1]
-const WAYS               = 8;     // fixed for Machine 9 (8-way)[cite: 1]
+const MAIN_MEMORY_BLOCKS = 1024;  // fixed per project spec
+const WAYS               = 8;     // fixed for Machine 9 (8-way)
 const CACHE_ACCESS_TIME  = 1;     // ns (Tc - Cache Access Time)
 const MEMORY_ACCESS_TIME = 10;    // ns (Tm - Main Memory Access Time)
-
 
 // CacheEngine Class
 class CacheEngine {
   /**
-   * @param {Object} config
-   * @param {number} config.numCacheBlocks  - total cache blocks (power of 2, ≥ 8)
-   * @param {number} config.blockSize       - words per block (power of 2, ≥ 2)
-   * @param {string} config.policy          - 'LRU' or 'MRU'
-   * @param {string} config.readPolicy      - 'non-load-through' or 'load-through'
-   */
+    * Creates a new CacheEngine instance with the given configuration.
+    * Initializes the cache sets and resets all statistics.
+    *
+    * @param {Object} config
+    * @param {number} config.numCacheBlocks - total number of cache blocks (power of 2, minimum 8)
+    * @param {number} config.blockSize      - number of words per block (power of 2, minimum 2)
+    * @param {string} config.policy         - replacement policy: 'LRU' or 'MRU'
+    * @param {string} config.readPolicy     - read policy: 'non-load-through' or 'load-through'
+  */
   constructor(config) {
     this.numCacheBlocks = config.numCacheBlocks;
     this.blockSize      = config.blockSize;
@@ -52,14 +59,9 @@ class CacheEngine {
 
   // Private: Initialisation
   /**
-   * TODO: implement this
-   * Initialise this.sets as a 2D array: [numSets][ways]
-   * Each cache line should be an object with:
-   *   { valid: false, tag: null, blockNum: null, order: 0 }
-   *
-   * Also initialise this.setClock as an array of numSets zeros.
-   * The clock for each set is incremented on every access to that set,
-   * and is used as the 'order' timestamp for LRU/MRU tracking.
+   * Initializes all cache sets to an empty state.
+   * Each set contains 8 ways, and each way starts as invalid (valid: false).
+   * Also initializes a per-set clock used to track access order for LRU/MRU.
    */
   _initCache() {
     // Allocate 2D array: numSets rows x 8 ways (columns)
@@ -78,8 +80,8 @@ class CacheEngine {
   }
 
   /**
-   * TODO: implement this
-   * Reset hit/miss counters and the access log array.
+   * Resets all hit/miss counters and clears the access log.
+   * Called automatically at the start of every simulate() call.
    */
   _resetStats() {
     this.stats = {
@@ -92,12 +94,11 @@ class CacheEngine {
 
   // Address Decomposition
   /**
-   * TODO:
-   * Given a block address, return its set index and tag.
+   * Decomposes a block address into its set index and tag.
    *
-   * Formula:
+   * Formula (per project specification):
    *   setIndex = blockAddr % numSets
-   *   tag      = Math.floor(blockAddr / numSets)
+   *   tag      = floor(blockAddr / numSets)
    *
    * @param {number} blockAddr
    * @returns {{ setIndex: number, tag: number }}
@@ -110,14 +111,13 @@ class CacheEngine {
 
   // Replacement Policy 
   /**
-   * TODO: implement this
-   * Select which way index to evict from a full set.
+   * Selects which way to evict from a full set based on the active policy.
    *
-   * LRU: evict the line with the SMALLEST order value (accessed longest ago)
-   * MRU: evict the line with the LARGEST  order value (accessed most recently)
+   * LRU: evicts the way with the smallest order value (accessed longest ago)
+   * MRU: evicts the way with the largest order value (accessed most recently)
    *
-   * @param {Object[]} set - array of cache lines for one set
-   * @returns {number} index of the line to evict (0–7)
+   * @param {Object[]} set - array of 8 cache line objects for one set
+   * @returns {number} index (0–7) of the way to evict
    */
   _selectVictim(set) {
     let victimIndex = 0;
@@ -143,47 +143,17 @@ class CacheEngine {
 
   // Core Access
   /**
-   * TODO: implement this
-   * Process one block access. This is the most important method.
+   * Processes a single block access against the cache.
    *
-   * Steps:
-   *   1. Increment totalAccesses and the set's clock.
-   *   2. Decompose blockAddr into setIndex and tag.
-   *   3. Search the set for a line with matching tag and valid=true.
-   *      - If found: HIT — update that line's order to current clock.
-   *      - If not found: MISS
-   *          a. Find an empty slot (valid=false) -> load into it.
-   *          b. No empty slot -> call _selectVictim(), record eviction, replace.
-   *   4. Build and return a log entry object (see LOG ENTRY CONTRACT below).
-   *   5. Push the log entry to this.accessLog.
-   *
-   * LOG ENTRY CONTRACT
-   * Return an object with EXACTLY these fields (Member 2 reads all of them):
-   * {
-   *   accessNum:   number,   // 1-indexed access counter
-   *   blockAddr:   number,   // the block address that was accessed
-   *   setIndex:    number,   // which set it maps to
-   *   tag:         number,   // the tag value
-   *   result:      string,   // 'HIT' or 'MISS'
-   *   policy:      string,   // 'LRU' or 'MRU'
-   *   readPolicy:  string,   // 'non-load-through' or 'load-through'
-   *   hitLine:     number|null,  // way index of the hit (null if MISS)
-   *   loadedLine:  number|null,  // way index where block was loaded (null if HIT)
-   *   evicted: null | {          // null if no eviction occurred
-   *     line:     number,    // way index that was evicted
-   *     blockNum: number,    // block number that was evicted
-   *     tag:      number,    // tag of evicted block
-   *     reason:   string,    // human-readable reason, e.g. "Least recently used (order 3)"
-   *   },
-   *   snapshot: Object[],   // deep copy of the set's lines AFTER this access
-   *                         // (array of 8 line objects for this set)
-   * }
+   * On a HIT: updates the accessed line's order timestamp.
+   * On a MISS: loads the block into an empty slot if one exists,
+   *            or evicts a victim (via LRU/MRU) if the set is full.
    *
    * @param {number} blockAddr
    * @returns {Object} log entry
    */
   access(blockAddr) {
-    // Step 1: Increment overall counter & local set clock
+    // Increment overall counter & local set clock
     this.stats.totalAccesses++;
     const { setIndex, tag } = this.decompose(blockAddr);
     this.setClock[setIndex]++;
@@ -195,7 +165,7 @@ class CacheEngine {
     let loadedLine = null;
     let evicted = null;
 
-    // Step 2 & 3: Check for cache hit across all 8 ways in the set
+    // Check for cache hit across all 8 ways in the set
     for (let way = 0; way < this.ways; way++) {
       if (targetSet[way].valid && targetSet[way].tag === tag) {
         result = 'HIT';
@@ -242,7 +212,7 @@ class CacheEngine {
       };
     }
 
-    // Step 4: Create a deep snapshot copy of the 8 lines in this set for rendering in UI
+    // Create a deep snapshot copy of the 8 lines in this set for rendering in UI
     const snapshot = targetSet.map(line => ({ ...line }));
 
     // Construct log entry adhering to LOG ENTRY CONTRACT
@@ -260,18 +230,18 @@ class CacheEngine {
       snapshot:   snapshot
     };
 
-    // Step 5: Save to access log and return
+    // Save to access log and return
     this.accessLog.push(logEntry);
     return logEntry;
   }
 
   // Batch Simulation
   /**
-   * Run a complete sequence of block accesses from scratch.
-   * Resets the cache and stats before starting.
+   * Runs a full simulation from scratch on the given sequence of block addresses.
+   * Resets the cache and statistics before starting.
    *
-   * @param {number[]} sequence
-   * @returns {Object[]} array of log entries (one per access)
+   * @param {number[]} sequence - array of block addresses to access in order
+   * @returns {Object[]} array of log entries, one per access
    */
   simulate(sequence) {
     this._initCache();
@@ -281,32 +251,17 @@ class CacheEngine {
 
   // Statistics
   /**
-   * TODO:
-   * Compute and return all statistics after a simulation (or partial run).
-   *
-   * STATS CONTRACT
-   * Return an object with EXACTLY these fields (Member 2 reads all of them):
-   * {
-   *   totalAccesses: number,
-   *   hits:          number,
-   *   misses:        number,
-   *   hitRate:       string,   // e.g. "75.00%"
-   *   missRate:      string,   // e.g. "25.00%"
-   *   hitRateRaw:    number,   // e.g. 0.75  (used by comparison.js)
-   *   missRateRaw:   number,   // e.g. 0.25
-   *   amat:          string,   // e.g. "3.5000 ns"
-   *   amatRaw:       number,   // e.g. 3.5    (used by comparison.js)
-   *   totalTime:     string,   // e.g. "224.00 ns"
-   *   totalTimeRaw:  number,   // e.g. 224    (used by comparison.js)
-   * }
+   * Computes and returns all statistics for the current simulation state.
+   * Can be called mid-simulation (e.g. during step-by-step mode) or after
+   * the full sequence has been processed.
    *
    * AMAT formulas:
-   *   non-load-through: AMAT = Tc + (missRate × Tm)
-   *                          = 1  + (missRate × 10)
-   *   load-through:     AMAT = (hitRate × Tc) + (missRate × Tm)
-   *                          = (hitRate × 1)  + (missRate × 10)
+   *   Non-load-through: AMAT = Tc + (Miss Rate × Tm)
+   *   Load-through:     AMAT = (Hit Rate × Tc) + (Miss Rate × Tm)
    *
-   * @returns {Object}
+   * Where Tc = 1 ns (cache access time) and Tm = 10 ns (memory access time)
+   * 
+   * @returns {Object} statistics object (see STATS CONTRACT in code)
    */
   getStats() {
     const total = this.stats.totalAccesses;
@@ -345,12 +300,11 @@ class CacheEngine {
   }
 
   // Final State Snapshot
-
   /**
-   * Return the current state of ALL cache sets.
-   * Used by ui.js for the Final Snapshot display mode.
+   * Returns a snapshot of the entire cache state at the current moment.
+   * Returns a deep copy so the caller cannot accidentally mutate live cache data.
    *
-   * @returns {Object[][]} 2D array [numSets][ways] of cache line objects
+   * @returns {Object[][]} 2D array [numSets][8] of cache line objects
    */
   getCacheState() {
     // Return a cloned copy of the 2D array to prevent external direct mutations

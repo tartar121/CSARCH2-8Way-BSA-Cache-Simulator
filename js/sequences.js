@@ -1,28 +1,23 @@
 /**
- * sequences.js for Member 4
- * Generates the three required test sequences and handles custom input.
- *     No DOM access here. These are pure functions that return arrays.
- *     Member 2 (ui.js) calls these and passes the result to the engine.
+ * sequences.js
+ * Generates the three required test sequences for the cache simulator,
+ * and handles parsing of custom user-entered sequences.
  *
- * YOUR JOB:
- *   1. Fill in the three generator functions below.
- *   2. Fill in parseCustomSequence().
- *   3. Test each function in the browser console:
- *        console.log(generateSequential(16));   // should be 64 numbers
- *        console.log(generateMidRepeat(4));      // check against spec
- *        console.log(generateRandom().length);   // should be 64
+ * All functions here are pure - they take simple inputs and return
+ * arrays of block addresses. No DOM access, no side effects.
+ *
+ * The three required test cases (per project specification):
+ *  - Sequential: access blocks 0 to 2n-1, repeated twice
+ *  - Mid-Repeat: structured pattern with forward, repeated, and reverse passes
+ *  - Random: 64 randomly generated block addresses in [0, 1023]
  */
 
-
 /**
- * // TODO: implement this
- * Generate the Sequential test sequence.
- *
- * Spec: Access blocks 0 to 2n-1, then repeat the same range once more.
+ * Generates the Sequential test sequence.
+ * Accesses blocks 0 through 2n-1, then repeats the same range once more.
  * Total accesses = 4n.
- *
- * Example (n=4):
- *   0,1,2,3,4,5,6,7,  0,1,2,3,4,5,6,7
+ * 
+ * Example (n=4): 0,1,2,3,4,5,6,7, 0,1,2,3,4,5,6,7
  *
  * @param {number} n - total number of cache blocks
  * @returns {number[]}
@@ -35,14 +30,13 @@ function generateSequential(n) {
 
 
 /**
- * // TODO: implement this
- * Generate the Mid-Repeat test sequence EXACTLY per the project spec.
+ * Generates the Mid-Repeat test sequence per the project specification.
  *
- * Spec (let n = total cache blocks):
- *   Part 1: 0 to n-1
- *   Part 2: 0 to 2n-1   (repeated twice)
- *   Part 3: n-1 to 0    (reverse)
- *   Part 4: 2n-1 to 0   (reverse, repeated twice)
+ * Structure (n = total cache blocks):
+ *   Part 1: 0 to n-1    (forward, once)
+ *   Part 2: 0 to 2n-1   (forward, twice)
+ *   Part 3: n-1 to 0    (reverse, once)
+ *   Part 4: 2n-1 to 0   (reverse, twice)
  *
  * Example (n=4):
  *   0,1,2,3,
@@ -75,13 +69,10 @@ function generateMidRepeat(n) {
 
 
 /**
- * // TODO: implement this
- * Generate a random sequence of exactly 64 block accesses.
- * All values must be integers in the range [0, 1023] (inclusive).
+ * Generates a random test sequence of exactly 64 block addresses.
+ * All values are integers randomly chosen from [0, 1023].
  *
- * Hint: Math.floor(Math.random() * 1024)
- *
- * @returns {number[]} array of 64 random integers
+ * @returns {number[]}
  */
 function generateRandom() {
   const seq = [];
@@ -91,29 +82,18 @@ function generateRandom() {
   return seq;
 }
 
-
 /**
- * // TODO: implement this
- * Parse a raw string from the custom sequence textarea into a
- * clean array of valid block addresses.
+ * Parses a raw string from the custom sequence textarea into a
+ * validated array of block addresses.
  *
- * Rules:
- *   - Split on commas and/or whitespace
- *   - Convert each token to a number with Number()
- *   - Filter out anything that is:
- *       • NaN
- *       • not an integer (e.g. 1.5)
- *       • less than 0
- *       • greater than 1023
- *
- * Returns an empty array if nothing valid remains.
+ * Accepts comma-separated or space-separated integers.
+ * Silently filters out anything that is not an integer in [0, 1023].
  *
  * Example:
- *   parseCustomSequence("0, 5, abc, 1024, -1, 512")
- *   -> [0, 5, 512]
+ *   "0, 5, abc, 1024, -1, 512"  →  [0, 5, 512]
  *
- * @param {string} raw - the raw textarea content
- * @returns {number[]}
+ * @param {string} raw - raw text from the textarea
+ * @returns {number[]} cleaned array of valid block addresses
  */
 function parseCustomSequence(raw) {
   if (!raw || typeof raw !== 'string') return [];
